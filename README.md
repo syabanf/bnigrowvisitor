@@ -85,27 +85,174 @@ national_admin / admin
 - Migrations: `supabase/migrations/`
 - Tabel utama: `users`, `visitors`, `members`, `meetings`, `chapters`, `domains`
 
+### PWA
+
+Aplikasi terpasang sebagai PWA (installable, jalan layar penuh tanpa chrome
+browser).
+
+- `src/app/manifest.ts` — manifest, disajikan di `/manifest.webmanifest`
+- `public/sw.js` — service worker. **`/api/*` tidak pernah di-cache**: datanya
+  live dan ter-scope per tenant, jadi meng-cache-nya berisiko membocorkan data
+  antar chapter/akun. Navigasi pakai network-first dengan fallback
+  `public/offline.html`; hanya build output ber-hash dan ikon yang cache-first.
+- `src/components/pwa/ServiceWorkerRegistrar.tsx` — registrasi + prompt install
+- Ikon: `public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`,
+  `apple-touch-icon.png`
+
+**Navigasi bawah (mobile).** `MobileTabBar` kini tampil di semua layar mobile
+kecuali halaman fullscreen (Pipeline Board, yang punya header & tombol back
+sendiri). Sebelumnya dia dikecualikan di route chapter dan area national,
+sehingga chapter admin dan national admin hanya kebagian hamburger drawer di
+HP — padahal tab chapter sudah dirancang me-resolve ke `/chapter/<id>/…`. Ada
+dua set tab:
+
+- `variant="chapter"` — Dashboard · Visitor · Guest · Pipeline · MCQA · WA Blast
+- `variant="national"` — Dashboard · Chapter · Wilayah · Audit · Policy · API
+
+Layout memilih variant-nya dari `isNationalArea`. Label versi national sengaja
+dipendekkan ("Audit", bukan "Governance & Audit") supaya enam tab tetap muat di
+viewport 375px.
+
+Layout mobile menghormati safe area (notch & home indicator) lewat
+`viewport-fit=cover` plus utility `.pb-safe-tabbar` / `.px-safe` di
+`globals.css`. `MobileTabBar` mempublikasikan tingginya sebagai CSS variable
+`--tabbar-height`, dipakai overlay (bubble assistant, prompt install, padding
+konten) supaya tidak saling tumpuk pada route yang tidak merender tab bar.
+
+### Quick Tour
+
+Tur berpandu keliling semua fitur, dengan **narasi suara** berbahasa Indonesia.
+
+- `src/components/tour/steps.ts` — daftar langkah, terpisah per peran
+- `src/components/tour/QuickTour.tsx` — spotlight, kartu, navigasi
+- `src/lib/ui/speech.ts` — narasi: ElevenLabs dulu, jatuh ke Web Speech API
+- `src/app/api/tts/route.ts` — proxy ElevenLabs sisi server
+- `src/lib/ui/sound.ts` — nada penutup, disintesis lewat Web Audio (tanpa file aset)
+
+Dipicu dari tombol **Tour** di navbar, dari sidebar, atau otomatis sekali pada
+kunjungan pertama. Bisa dimatikan narasinya lewat ikon speaker di kartu tur
+(tersimpan di `localStorage`).
+
+#### Narasi ElevenLabs
+
+Kredensialnya ada di **`.env`, yang ikut ter-commit** (permintaan pemilik repo),
+jadi clone mana pun langsung bisa memakai narasi tanpa setup. Konsekuensinya:
+repo ini publik, sehingga kunci tersebut terbaca siapa pun — rotasi lewat
+dashboard ElevenLabs kalau disalahgunakan. Untuk menariknya keluar dari version
+control, pindahkan barisnya ke `.env.local` (sudah tercakup `.gitignore`).
+
+`ELEVENLABS_API_KEY` **hanya dibaca di server** (`/api/tts`) dan tidak pernah
+sampai ke browser — menaruhnya di variabel `NEXT_PUBLIC_` akan mengirimkannya ke
+setiap pengunjung. Route-nya dijaga tiga lapis karena memakai kredit sungguhan:
+wajib punya sesi login, panjang teks dibatasi 600 karakter, dan kegagalan
+upstream dikembalikan sebagai status yang bisa di-fallback, bukan error ke user.
+
+Audio di-cache dua kali: `Cache-Control: private, max-age=86400` di response, dan
+sebuah `Map` di client — teks langkah yang sama tidak pernah dibeli dua kali
+dalam satu sesi.
+
+Kalau ElevenLabs tidak tersedia (key kosong, paket tidak mengizinkan voice-nya,
+kuota habis, atau sedang offline), narasi otomatis pindah ke suara bawaan
+browser. Tur tidak pernah bisu.
+
+> **Catatan paket:** voice *library/professional* (mis. "Bian", `id-ID`) hanya
+> bisa dipakai lewat API pada paket berbayar; akun free mengembalikan `402
+> paid_plan_required`. Paket free tetap bisa memakai voice *premade*.
+
+Tiap langkah menempel pada atribut `data-tour` di sidebar, tab bar, dan bubble
+asisten. Dua hal yang perlu diingat kalau menambah langkah:
+
+- **Sauh harus beririsan dengan viewport.** Di HP, sidebar adalah drawer
+  off-canvas di `left:-243px` yang tetap melaporkan ukuran non-nol — kalau hanya
+  mengecek lebar/tinggi, spotlight-nya mendarat di luar layar. Tur otomatis
+  membuka drawer untuk fitur yang hanya ada di sidebar.
+- **Langkah yang sauhnya tidak ada di DOM akan disaring saat tur dimulai**, bukan
+  saat dijalankan. Itu cara peran menentukan isi tur tanpa menduplikasi logika
+  sidebar di sini — sekaligus supaya penghitung "x / N" tidak menyebut total yang
+  tak pernah tercapai. Contoh: Log Aktivitas hilang untuk chapter admin
+  (15 langkah), muncul untuk national admin (9 langkah versi nasional).
+
 ### Supabase Admin Client
+
+Satu-satunya pintu akses data server-side — seluruh service dan API route lewat
+sini, termasuk halaman konfirmasi publik `/wm/[token]`. Karena itu demo mode
+cukup disuntik di satu tempat.
+
 ```ts
 // src/lib/server/supabaseAdmin.ts
-import { createClient } from '@supabase/supabase-js'
-export const getSupabaseAdmin = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-)
+export function getSupabaseAdmin(): SupabaseClient {
+  if (cachedClient) return cachedClient
+  if (isDemoMode()) {
+    cachedClient = createDemoSupabaseClient()   // fake in-memory, lihat Demo Mode
+    return cachedClient
+  }
+  // ...client Supabase asli dengan service role key
+}
 ```
+
+> Client dibuat per request di dalam handler, bukan di module scope. Client
+> level-modul akan dikonstruksi saat build mengumpulkan page data, sehingga
+> build gagal kapan pun kredensial tidak tersedia saat build.
+
+---
+
+## Demo Mode
+
+Aplikasi bisa jalan **tanpa Supabase sama sekali**. Tanpa `.env.local`, demo mode
+menyala otomatis: `getSupabaseAdmin()` mengembalikan fake client in-memory yang
+sudah terisi data dummy (3 chapter, meeting mingguan, visitor lintas status,
+member, guest, activity log).
+
+```bash
+git clone <repo> && cd bni-vh
+npm install
+npm run dev      # langsung jalan, tidak perlu kredensial
+```
+
+Di halaman login muncul panel **Demo Mode** berisi tombol per peran — sekali
+klik langsung masuk tanpa mengetik kredensial. Panel ini digerakkan oleh
+`/api/demo`, yang saat demo mode mati hanya mengembalikan `{ "demo": false }`
+(tanpa daftar akun maupun password), jadi deployment asli tidak pernah
+menampilkannya.
+
+Akun demo (semua password `demo123`):
+
+| Email | Role | Scope |
+|-------|------|-------|
+| `national@demo.test` | National Admin | Semua chapter |
+| `grow@demo.test` | Chapter Admin | BNI Grow |
+| `rise@demo.test` | Chapter Admin | BNI Rise |
+| `pic@demo.test` | PIC | BNI Grow |
+| `member@demo.test` | Member | BNI Grow |
+
+`localhost:3000` di-map ke chapter BNI Grow. Chapter lain bisa dibuka lewat
+`grow.localhost:3000`, `rise.localhost:3000`, `surya.localhost:3000` (Chromium
+me-resolve `*.localhost` ke 127.0.0.1 tanpa perlu edit `/etc/hosts`).
+
+Perubahan data di demo mode tersimpan di memori proses dan hilang saat server
+restart. Toggle manual lewat `DEMO_MODE=true` / `DEMO_MODE=false`.
+
+Implementasi: `src/lib/server/demo/` — `config.ts` (toggle), `fakeSupabase.ts`
+(query builder PostgREST tiruan), `store.ts` (tabel in-memory), `seed.ts` (data).
 
 ---
 
 ## Environment Variables (`.env.local`)
 
+Lihat `.env.example` untuk daftar lengkap beserta keterangannya.
+
 ```
+# Wajib untuk data asli — kosongkan untuk tetap di demo mode
 NEXT_PUBLIC_SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-HMAC_SECRET=
-OPENAI_API_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Opsional
+DEMO_MODE=
+SESSION_SECRET=
+DEEPSEEK_API_KEY=
+APP_BASE_DOMAIN=
+CRON_SECRET=
 ```
 
 ---

@@ -1,18 +1,16 @@
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/server/supabaseAdmin'
 
 export const dynamic = 'force-dynamic'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-)
 
 const CONFIRMABLE_STATUSES = ['new', 'followup']
 const ALREADY_DONE_STATUSES = ['confirmed', 'attended', 'interview', 'member', 'not_continue']
 
 export default async function ConfirmPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
+  // Built per request rather than at module scope: a module-level client is
+  // constructed while the build collects page data, which fails whenever the
+  // credentials aren't present at build time (and bypassed demo mode entirely).
+  const supabaseAdmin = getSupabaseAdmin()
 
   const { data: visitor } = await supabaseAdmin
     .from('visitors')

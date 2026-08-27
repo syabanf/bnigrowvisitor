@@ -1,8 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { getChapterRoute } from '@/lib/chapterRoute'
+import { useEffect, useRef, useState } from 'react'
 
 const TABS = [
   {
@@ -107,13 +106,61 @@ const TABS = [
   },
 ]
 
-interface MobileTabBarProps {
-  currentPage: string
+// National admins have a different menu entirely, so the chapter tabs above
+// would navigate them nowhere useful. Icons mirror the sidebar's so the two
+// navigations read as the same app.
+function strokeIcon(path: string, active: boolean) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? 2.6 : 2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="w-5 h-5"
+    >
+      <path d={path} />
+    </svg>
+  )
 }
 
-export default function MobileTabBar({ currentPage }: MobileTabBarProps) {
+const NATIONAL_ICON_PATHS: Record<string, string> = {
+  'national-overview': 'M3 13h2l2 6 4-14 3 9 2-4h3',
+  'national-dashboard': 'M3 3h7v7H3V3zm11 0h7v7h-7V3zm0 11h7v7h-7v-7zM3 14h7v7H3v-7z',
+  master: 'M4 6h16M4 12h16M4 18h16M8 4v4M16 10v4M12 16v4',
+  'national-governance': 'M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-4z',
+  'national-policies': 'M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z',
+  'national-api-keys':
+    'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
+}
+
+// Labels are deliberately shorter than the sidebar's ("Audit" not
+// "Governance & Audit") so six tabs still fit a 375px viewport.
+const NATIONAL_TABS = [
+  { id: 'national-overview', label: 'Dashboard', absolutePath: '/national-overview' },
+  { id: 'national-dashboard', label: 'Chapter', absolutePath: '/national-dashboard' },
+  { id: 'master', label: 'Wilayah', absolutePath: '/master' },
+  { id: 'national-governance', label: 'Audit', absolutePath: '/national-governance' },
+  { id: 'national-policies', label: 'Policy', absolutePath: '/national-policies' },
+  { id: 'national-api-keys', label: 'API', absolutePath: '/national-api-keys' },
+].map(tab => ({
+  ...tab,
+  path: undefined as string | undefined,
+  fallbackPath: undefined as string | undefined,
+  icon: strokeIcon(NATIONAL_ICON_PATHS[tab.id], false),
+  iconFilled: strokeIcon(NATIONAL_ICON_PATHS[tab.id], true),
+}))
+
+interface MobileTabBarProps {
+  currentPage: string
+  variant?: 'chapter' | 'national'
+}
+
+export default function MobileTabBar({ currentPage, variant = 'chapter' }: MobileTabBarProps) {
   const router = useRouter()
   const [chapterId, setChapterId] = useState('')
+  const tabs: typeof NATIONAL_TABS = (variant === 'national' ? NATIONAL_TABS : TABS) as typeof NATIONAL_TABS
 
   useEffect(() => {
     const routeMatch = window.location.pathname.match(/^\/chapter\/([^/]+)/)
@@ -130,9 +177,36 @@ export default function MobileTabBar({ currentPage }: MobileTabBarProps) {
     }
   }, [])
 
-  const resolvePath = (tab: typeof TABS[0]) => {
-    if (chapterId) return `/chapter/${encodeURIComponent(chapterId)}/${tab.path}`
-    return tab.fallbackPath
+  // Publish the bar's real height so overlays (assistant bubble, install
+  // prompt) can sit above it. The bar is conditionally rendered per route, so
+  // a hardcoded offset would leave a gap wherever it's absent.
+  const barRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    const node = barRef.current
+    const root = document.documentElement
+    if (!node) {
+      root.style.removeProperty('--tabbar-height')
+      return
+    }
+
+    const publish = () => {
+      root.style.setProperty('--tabbar-height', `${Math.round(node.getBoundingClientRect().height)}px`)
+    }
+    publish()
+
+    const observer = new ResizeObserver(publish)
+    observer.observe(node)
+    return () => {
+      observer.disconnect()
+      root.style.removeProperty('--tabbar-height')
+    }
+  }, [])
+
+  const resolvePath = (tab: (typeof NATIONAL_TABS)[0]) => {
+    // National destinations are never chapter-scoped.
+    if (tab.absolutePath) return tab.absolutePath
+    if (chapterId && tab.path) return `/chapter/${encodeURIComponent(chapterId)}/${tab.path}`
+    return tab.fallbackPath as string
   }
 
   // Hide on fullscreen pages (Kanban has its own layout)
@@ -140,6 +214,7 @@ export default function MobileTabBar({ currentPage }: MobileTabBarProps) {
 
   return (
     <nav
+      ref={barRef}
       className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-white/60 bg-white/90"
       style={{
         backdropFilter: 'blur(10px)',
@@ -147,11 +222,12 @@ export default function MobileTabBar({ currentPage }: MobileTabBarProps) {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
-      {TABS.map(tab => {
+      {tabs.map(tab => {
         const isActive = currentPage === tab.id
         return (
           <button
             key={tab.id}
+            data-tour={tab.id}
             onClick={() => router.push(resolvePath(tab))}
             className={`flex flex-1 flex-col items-center gap-0.5 pt-2 pb-1.5 transition-[color] duration-150 active:scale-95 ${
               isActive ? 'text-red-600' : 'text-gray-500'

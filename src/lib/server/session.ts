@@ -1,6 +1,7 @@
 import 'server-only'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { cookies } from 'next/headers'
+import { DEMO_SESSION_SECRET, isDemoMode } from './demo/config'
 
 export const SESSION_COOKIE = 'bni_session'
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
@@ -16,10 +17,11 @@ export interface SessionPayload {
 
 function getSessionSecret(): string {
   const secret = process.env.SESSION_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!secret) {
-    throw new Error('SESSION_SECRET atau SUPABASE_SERVICE_ROLE_KEY wajib diset untuk sesi login.')
-  }
-  return secret
+  if (secret) return secret
+  // Demo mode has no service-role key to borrow, so it signs with a fixed
+  // constant. Safe only because demo data is fabricated and disposable.
+  if (isDemoMode()) return DEMO_SESSION_SECRET
+  throw new Error('SESSION_SECRET atau SUPABASE_SERVICE_ROLE_KEY wajib diset untuk sesi login.')
 }
 
 function base64UrlEncode(value: string): string {

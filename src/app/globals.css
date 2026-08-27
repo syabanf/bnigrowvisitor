@@ -582,3 +582,48 @@ tbody tr:nth-child(12) { animation-delay: 240ms; }
     -webkit-backdrop-filter: blur(10px) !important;
   }
 }
+
+/* ==========================================================================
+   PWA / mobile standalone
+   Applies when the app is installed to the home screen and runs without
+   browser chrome. viewport-fit=cover (set in layout.tsx) is what makes the
+   env(safe-area-inset-*) values below resolve to anything but 0.
+   ========================================================================== */
+
+html {
+  /* iOS inflates text in landscape without this, breaking fixed layouts. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  /* 100vh is the *largest* viewport on mobile, so it sits under the browser
+     toolbar and causes a phantom scroll. dvh tracks the real visible box. */
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Bottom padding that clears MobileTabBar *and* the home indicator. */
+.pb-safe-tabbar {
+  padding-bottom: calc(1.5rem + var(--tabbar-height, 0px) + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .pb-safe-tabbar {
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* Horizontal insets for landscape notches. */
+.px-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@media (display-mode: standalone) {
+  body {
+    /* No browser to pull-to-refresh, so the rubber-band just looks broken. */
+    overscroll-behavior-y: none;
+  }
+
+}

@@ -15,6 +15,18 @@ interface LoginBranding {
 
 const DEFAULT_BRANDING: LoginBranding = { name: 'BNI', displayName: 'BNI', cityName: '' }
 
+interface DemoAccount {
+  email: string
+  name: string
+  label: string
+  scope: string
+}
+
+interface DemoInfo {
+  password: string
+  accounts: DemoAccount[]
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [branding, setBranding] = useState<LoginBranding>(DEFAULT_BRANDING)
@@ -31,6 +43,9 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [changeLoading, setChangeLoading] = useState(false)
   const [verifyLoading, setVerifyLoading] = useState(false)
+  // null until we know; stays null on a real deployment, which hides the panel.
+  const [demo, setDemo] = useState<DemoInfo | null>(null)
+  const [demoPending, setDemoPending] = useState('')
 
   // Pull branding from the domain's tenant so the login screen reflects the
   // chapter, not a hardcoded one.
@@ -52,6 +67,48 @@ export default function LoginPage() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/demo', { cache: 'no-store' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(info => {
+        if (cancelled || !info?.demo) return
+        setDemo({ password: info.password, accounts: info.accounts || [] })
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Shared by the form and the demo shortcuts so both take the same path.
+  const authenticate = async (withEmail: string, withPassword: string) => {
+    const result = await signIn(withEmail, withPassword)
+    if (result.success && result.user) {
+      localStorage.setItem('user', JSON.stringify(result.user))
+      router.push(isNationalAdmin(result.user) ? '/national-overview' : getChapterRoute('dashboard', result.user))
+      return
+    }
+    throw new Error(result.error || 'Login gagal. Silakan coba lagi.')
+  }
+
+  const handleDemoLogin = async (account: DemoAccount) => {
+    if (!demo) return
+    setError('')
+    setSuccess('')
+    setDemoPending(account.email)
+    setEmail(account.email)
+    setPassword(demo.password)
+
+    try {
+      await authenticate(account.email, demo.password)
+    } catch (err: any) {
+      setError(err.message || 'Login demo gagal.')
+    } finally {
+      setDemoPending('')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -59,14 +116,7 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      const result = await signIn(email, password)
-
-      if (result.success && result.user) {
-        localStorage.setItem('user', JSON.stringify(result.user))
-        router.push(isNationalAdmin(result.user) ? '/national-overview' : getChapterRoute('dashboard', result.user))
-      } else {
-        setError(result.error || 'Login gagal. Silakan coba lagi.')
-      }
+      await authenticate(email, password)
     } catch (err: any) {
       setError(err.message || 'Terjadi kesalahan.')
     } finally {
@@ -418,6 +468,56 @@ export default function LoginPage() {
                 )}
               </button>
             </form>
+
+            {/* One-click demo logins. Rendered only when the server reports demo
+                mode, so a real deployment never shows it. */}
+            {demo && mode === 'login' && demo.accounts.length > 0 && (
+              <div className="mt-6">
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-gray-200" />
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                    Demo Mode
+                  </span>
+                  <span className="h-px flex-1 bg-gray-200" />
+                </div>
+
+                <p className="mt-3 text-center text-xs text-gray-500">
+                  Data dummy, tanpa database. Pilih peran untuk masuk langsung.
+                </p>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {demo.accounts.map(account => {
+                    const isPending = demoPending === account.email
+                    return (
+                      <button
+                        key={account.email}
+                        type="button"
+                        onClick={() => handleDemoLogin(account)}
+                        disabled={!!demoPending || loading}
+                        aria-label={`Masuk sebagai ${account.label} — ${account.name}, ${account.scope}`}
+                        className="flex flex-col items-start rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left transition-all hover:border-red-300 hover:bg-red-50/60 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <span className="flex w-full items-center justify-between gap-1">
+                          <span className="truncate text-xs font-bold text-gray-900">{account.label}</span>
+                          {isPending && (
+                            <svg className="h-3 w-3 flex-shrink-0 animate-spin text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="mt-0.5 truncate text-[11px] text-gray-500">{account.scope}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <p className="mt-2.5 text-center text-[11px] text-gray-400">
+                  Semua akun demo memakai password <code className="font-mono text-gray-500">{demo.password}</code>
+                </p>
+              </div>
+            )}
 
             <button
               type="button"

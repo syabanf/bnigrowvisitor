@@ -125,6 +125,19 @@ export default function Sidebar({ currentPage }: SidebarProps) {
     }
   }, [])
 
+  // The quick tour needs sidebar-only entries on screen to point at them; on a
+  // phone that means opening the drawer first.
+  useEffect(() => {
+    const open = () => setIsOpen(true)
+    const close = () => setIsOpen(false)
+    window.addEventListener('bni:open-sidebar', open)
+    window.addEventListener('bni:close-sidebar', close)
+    return () => {
+      window.removeEventListener('bni:open-sidebar', open)
+      window.removeEventListener('bni:close-sidebar', close)
+    }
+  }, [])
+
   const handleNavigate = (path: string) => {
     router.push(path)
     setIsOpen(false)
@@ -180,6 +193,7 @@ export default function Sidebar({ currentPage }: SidebarProps) {
               return (
                 <button
                   key={item.id}
+                  data-tour={item.id}
                   onClick={() => handleNavigate(resolvePath(item))}
                   className={`
                     relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1
@@ -213,6 +227,7 @@ export default function Sidebar({ currentPage }: SidebarProps) {
               return (
                 <button
                   key={item.id}
+                  data-tour={item.id}
                   onClick={() => handleNavigate(resolvePath(item))}
                   className={`
                     relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1
@@ -249,6 +264,19 @@ export default function Sidebar({ currentPage }: SidebarProps) {
         </nav>
 
         <div className="border-t border-white/60 px-5 py-4 space-y-2">
+          <button
+            onClick={() => {
+              setIsOpen(false)
+              window.dispatchEvent(new Event('bni:start-tour'))
+            }}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:bg-white/60 hover:text-red-600"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.1 9a3 3 0 1 1 4.2 2.8c-.8.4-1.3 1-1.3 1.9v.3M12 17h.01" />
+            </svg>
+            Quick Tour
+          </button>
           <a
             href="https://wit.id"
             target="_blank"

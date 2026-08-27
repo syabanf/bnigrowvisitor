@@ -103,6 +103,19 @@ export default function Topbar({ title, user, onLogout, onAddVisitor, showAddVis
         {/* Right side */}
         <div className="ml-auto flex items-center gap-2">
 
+          <button
+            onClick={() => window.dispatchEvent(new Event('bni:start-tour'))}
+            aria-label="Mulai quick tour"
+            title="Quick Tour"
+            className="inline-flex h-9 items-center gap-1.5 px-2.5 rounded-xl border border-gray-200/80 bg-white/70 text-sm font-semibold text-gray-600 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          >
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.1 9a3 3 0 1 1 4.2 2.8c-.8.4-1.3 1-1.3 1.9v.3M12 17h.01" />
+            </svg>
+            <span className="hidden md:inline">Tour</span>
+          </button>
+
           {showAddVisitor && (
             <button
               onClick={onAddVisitor}

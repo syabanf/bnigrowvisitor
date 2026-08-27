@@ -65,12 +65,21 @@ const BUBBLE_WIDTH = 230
 const BUBBLE_HEIGHT = 64
 const VIEWPORT_PADDING = 16
 
-function clampPosition(position: { x: number; y: number }) {
+// The constants are only fallbacks for the first paint; once the bubble is in
+// the DOM its measured box is used, because the hardcoded width was ~27px wider
+// than the rendered pill and left a visible gap at the right edge.
+function clampPosition(
+  position: { x: number; y: number },
+  size?: { width: number; height: number }
+) {
   if (typeof window === 'undefined') return position
 
+  const width = size?.width || BUBBLE_WIDTH
+  const height = size?.height || BUBBLE_HEIGHT
+
   return {
-    x: Math.min(Math.max(VIEWPORT_PADDING, position.x), Math.max(VIEWPORT_PADDING, window.innerWidth - BUBBLE_WIDTH - VIEWPORT_PADDING)),
-    y: Math.min(Math.max(VIEWPORT_PADDING, position.y), Math.max(VIEWPORT_PADDING, window.innerHeight - BUBBLE_HEIGHT - VIEWPORT_PADDING)),
+    x: Math.min(Math.max(VIEWPORT_PADDING, position.x), Math.max(VIEWPORT_PADDING, window.innerWidth - width - VIEWPORT_PADDING)),
+    y: Math.min(Math.max(VIEWPORT_PADDING, position.y), Math.max(VIEWPORT_PADDING, window.innerHeight - height - VIEWPORT_PADDING)),
   }
 }
 
@@ -88,6 +97,11 @@ export default function GrowAssistant() {
   const [isSending, setIsSending] = useState(false)
   const [isOnline, setIsOnline] = useState<boolean | null>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
+  // Phones get a pinned, icon-only bubble instead of the draggable desktop pill:
+  // a 230px-wide draggable card eats most of a 375px viewport, and a position
+  // saved on desktop would land it somewhere useless after a resize.
+  const [isCompact, setIsCompact] = useState(false)
+  const bubbleRef = useRef<HTMLButtonElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [messages, setMessages] = useState<AssistantMessage[]>([
     {
@@ -110,9 +124,24 @@ export default function GrowAssistant() {
   })
 
   useEffect(() => {
+    // Matches MobileTabBar's `lg:hidden`: wherever the tab bar exists, the
+    // bubble is pinned above it instead of floating free.
+    const query = window.matchMedia('(max-width: 1023px)')
+    const sync = () => setIsCompact(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
+
+  useEffect(() => {
+    const box = bubbleRef.current?.getBoundingClientRect()
+    const size = box ? { width: box.width, height: box.height } : undefined
+    const width = size?.width || BUBBLE_WIDTH
+    const height = size?.height || BUBBLE_HEIGHT
+
     const defaultPosition = {
-      x: window.innerWidth - BUBBLE_WIDTH - 20,
-      y: window.innerHeight - BUBBLE_HEIGHT - 20,
+      x: window.innerWidth - width - VIEWPORT_PADDING,
+      y: window.innerHeight - height - VIEWPORT_PADDING,
     }
 
     try {
@@ -120,7 +149,7 @@ export default function GrowAssistant() {
       if (saved) {
         const parsed = JSON.parse(saved)
         if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
-          setPosition(clampPosition(parsed))
+          setPosition(clampPosition(parsed, size))
           return
         }
       }
@@ -128,7 +157,7 @@ export default function GrowAssistant() {
       // Ignore invalid saved positions and use the default.
     }
 
-    setPosition(clampPosition(defaultPosition))
+    setPosition(clampPosition(defaultPosition, size))
   }, [])
 
   useEffect(() => {
@@ -145,14 +174,14 @@ export default function GrowAssistant() {
   }, [assistantName, chapterBranding.chapterName, isNationalScope])
 
   useEffect(() => {
+    // Clamp in memory only. Persisting here meant that merely narrowing the
+    // window rewrote the saved position to the narrow viewport's right edge,
+    // so the bubble drifted left for good and never returned to the corner
+    // when the window was widened again. Only a real drag should persist.
     const handleResize = () => {
-      setPosition(prev => {
-        const next = clampPosition(prev)
-        try {
-          localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(next))
-        } catch {}
-        return next
-      })
+      const box = bubbleRef.current?.getBoundingClientRect()
+      const size = box ? { width: box.width, height: box.height } : undefined
+      setPosition(prev => clampPosition(prev, size))
     }
 
     window.addEventListener('resize', handleResize)
@@ -285,17 +314,28 @@ export default function GrowAssistant() {
     setIsOpen(prev => !prev)
   }
 
-  const panelVerticalClass = position.y > 360
+  const panelVerticalClass = isCompact || position.y > 360
     ? 'bottom-[calc(100%+1rem)]'
     : 'top-[calc(100%+1rem)]'
-  const panelHorizontalClass = position.x > 260 ? 'right-0' : 'left-0'
+  const panelHorizontalClass = isCompact || position.x > 260 ? 'right-0' : 'left-0'
   const resolveShortcutPath = (action: (typeof actionShortcuts)[number]) =>
     activeChapterId ? `/chapter/${encodeURIComponent(activeChapterId)}/${action.path}` : action.fallbackPath
 
   return (
     <div
       className="fixed z-[2147482000]"
-      style={{ left: position.x || undefined, top: position.y || undefined }}
+      style={
+        isCompact
+          ? {
+              // Anchored, not computed: stays glued to the bottom-right corner
+              // and clears the iOS home indicator in standalone PWA mode.
+              right: 'calc(1rem + env(safe-area-inset-right))',
+              // Rides on the tab bar's published height (0 on routes that don't
+              // render one) plus the iOS home-indicator inset.
+              bottom: 'calc(1rem + var(--tabbar-height, 0px) + env(safe-area-inset-bottom))',
+            }
+          : { left: position.x || undefined, top: position.y || undefined }
+      }
     >
       {isOpen && (
         <div className={`absolute ${panelVerticalClass} ${panelHorizontalClass} flex h-[min(640px,calc(100vh-7rem))] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/92 shadow-[0_24px_80px_rgba(15,23,42,0.22)] backdrop-blur-2xl`}>
@@ -412,16 +452,20 @@ export default function GrowAssistant() {
       )}
 
       <button
+        ref={bubbleRef}
+        data-tour="assistant"
         onClick={handleBubbleClick}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        className={`group flex h-16 touch-none select-none items-center gap-3 rounded-2xl bg-gradient-to-br from-red-600 via-red-700 to-red-900 px-4 pr-5 text-white shadow-[0_18px_50px_rgba(185,28,28,0.35)] ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(185,28,28,0.42)] ${
-          isDragging ? 'cursor-grabbing scale-[1.02]' : 'cursor-grab'
+        onPointerDown={isCompact ? undefined : handlePointerDown}
+        onPointerMove={isCompact ? undefined : handlePointerMove}
+        onPointerUp={isCompact ? undefined : handlePointerUp}
+        onPointerCancel={isCompact ? undefined : handlePointerUp}
+        className={`group flex touch-none select-none items-center justify-center bg-gradient-to-br from-red-600 via-red-700 to-red-900 text-white shadow-[0_18px_50px_rgba(185,28,28,0.35)] ring-1 ring-white/20 transition-all hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(185,28,28,0.42)] ${
+          isCompact
+            ? 'h-14 w-14 rounded-full'
+            : `h-16 gap-3 rounded-2xl px-4 pr-5 ${isDragging ? 'cursor-grabbing scale-[1.02]' : 'cursor-grab'}`
         }`}
         aria-label={`Buka ${assistantName}`}
-        title="Klik untuk buka, drag untuk pindahkan posisi"
+        title={isCompact ? `Buka ${assistantName}` : 'Klik untuk buka, drag untuk pindahkan posisi'}
       >
         {isOpen ? (
           <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -433,10 +477,12 @@ export default function GrowAssistant() {
               {assistantInitials}
               <span className={`absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-red-700 ${isOnline === false ? 'bg-gray-300' : 'bg-emerald-300'}`} />
             </span>
-            <span className="text-left leading-tight">
-              <span className="block text-sm font-black tracking-wide">{assistantName}</span>
-              <span className="block text-[11px] font-semibold text-white/75">Tanya data visitor</span>
-            </span>
+            {!isCompact && (
+              <span className="text-left leading-tight">
+                <span className="block text-sm font-black tracking-wide">{assistantName}</span>
+                <span className="block text-[11px] font-semibold text-white/75">Tanya data visitor</span>
+              </span>
+            )}
           </>
         )}
       </button>

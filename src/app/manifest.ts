@@ -1,0 +1,25 @@
+import type { MetadataRoute } from 'next'
+
+// Served at /manifest.webmanifest; Next injects the <link rel="manifest"> for us.
+// Deliberately chapter-neutral: one installed app serves every tenant, and the
+// chapter identity is resolved at runtime from the host.
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: 'BNI Visitor Management',
+    short_name: 'BNI Visitor',
+    description: 'Kelola kunjungan, visitor, member, dan meeting BNI dari satu aplikasi.',
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#ffffff',
+    theme_color: '#d9173b',
+    lang: 'id',
+    categories: ['business', 'productivity'],
+    icons: [
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  }
+}

@@ -11,6 +11,7 @@ import { getChapterRoute } from '@/lib/chapterRoute'
 
 const GrowAssistant = dynamic(() => import('@/components/assistant/GrowAssistant'), { ssr: false, loading: () => null })
 const MobileTabBar = dynamic(() => import('@/components/layout/MobileTabBar'), { ssr: false, loading: () => null })
+const QuickTour = dynamic(() => import('@/components/tour/QuickTour'), { ssr: false, loading: () => null })
 
 // Context for global actions
 interface DashboardContextType {
@@ -178,7 +179,6 @@ export default function DashboardLayout({
   // Check if current page should be fullscreen
   const isFullscreen = FULLSCREEN_PAGES.includes(pathname) || currentPage === 'kanban'
   const isNationalArea = ['national-overview', 'national-governance', 'national-policies', 'national-api-keys', 'national-dashboard', 'master'].includes(currentPage)
-  const isChapterRoute = pathname.startsWith('/chapter/')
 
   // Large title visibility → controls compact topbar title + scroll state
   const largeTitleRef = useRef<HTMLDivElement>(null)
@@ -256,7 +256,7 @@ export default function DashboardLayout({
             />
           )}
           
-          <main key={pathname} className="flex-1 p-4 pb-20 lg:p-6 lg:pb-6 overflow-auto fade-in-up">
+          <main key={pathname} className="flex-1 p-4 pb-safe-tabbar lg:p-6 overflow-auto fade-in-up">
             {/* Large title — mobile only; hides as user scrolls, topbar compact title fades in */}
             {!isFullscreen && (
               <div ref={largeTitleRef} className="lg:hidden -mx-4 px-4 pt-1 pb-3">
@@ -275,7 +275,14 @@ export default function DashboardLayout({
         </div>
       </div>
       <GrowAssistant />
-      {!isFullscreen && !isNationalArea && !isChapterRoute && currentPage !== 'chapter-dashboard' && <MobileTabBar currentPage={currentPage} />}
+      {/* Bottom nav on every mobile screen except the fullscreen ones. It used to
+          be excluded on chapter and national routes, which meant chapter admins
+          and national admins only ever got the hamburger drawer on a phone —
+          even though the chapter tabs already resolve to /chapter/<id>/… paths. */}
+      {!isFullscreen && (
+        <MobileTabBar currentPage={currentPage} variant={isNationalArea ? 'national' : 'chapter'} />
+      )}
+      <QuickTour />
     </DashboardContext.Provider>
   )
 }
