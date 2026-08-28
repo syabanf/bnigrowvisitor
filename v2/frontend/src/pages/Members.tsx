@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api/client'
 import Table from '../components/Table'
+import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 
 interface Member {
@@ -31,7 +32,7 @@ function renewalTone(date?: string): string {
 export default function Members() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const { items, total, loading, error, reload, setError } =
+  const { items, total, loading, error, reload, setError, page, setPage, pageSize, setPageSize } =
     useResource<Member>('/members', { q: search, status })
 
   const changeStatus = async (member: Member, next: Member['status']) => {
@@ -110,6 +111,11 @@ export default function Members() {
             ),
           },
         ]}
+      />
+
+      <Pagination
+        page={page} pageSize={pageSize} total={total} shown={items.length}
+        onPage={setPage} onPageSize={setPageSize}
       />
     </>
   )

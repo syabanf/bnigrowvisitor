@@ -437,3 +437,103 @@ td select { min-width: 9rem; }
 /* Placeholder while a lazily-loaded route chunk arrives. Reserving height stops
    the page collapsing and then jumping when the chunk resolves. */
 .route-loading { padding: 3rem 1rem; min-height: 12rem; }
+
+
+/* ---- Pagination ------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-top: 1rem;
+  padding-top: .875rem;
+  border-top: 1px solid var(--line);
+}
+
+.pagination__summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: .8125rem;
+  /* Fixed against its own content so the controls beside it do not shift
+     sideways every time the row range changes width. */
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.pagination__page {
+  padding: 0 .5rem;
+  font-size: .8125rem;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pagination__size select {
+  height: 2.25rem;
+  padding: 0 .5rem;
+  font-size: .8125rem;
+  margin-right: .375rem;
+}
+
+.btn--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 2.5rem square: the smallest reliable touch target, and these sit next to
+     each other where a miss lands on the wrong page. */
+  min-width: 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+}
+
+.btn--icon:disabled { opacity: .35; cursor: default; }
+.btn--icon:disabled:hover { background: transparent; }
+
+@media (max-width: 30rem) {
+  .pagination { justify-content: center; }
+  .pagination__summary { width: 100%; text-align: center; }
+  /* The page-size select is the first thing to go: on a phone the page
+     controls themselves are what the thumb needs to reach. */
+  .pagination__size { display: none; }
+}
+
+
+/* Stat cards that double as filters. Rendered as buttons, not clickable divs,
+   so they are reachable by keyboard and announce their pressed state. */
+.stat--action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .25rem;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.stat--action:hover { border-color: var(--line-strong); }
+
+.stat--on {
+  border-color: var(--red);
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+
+.stat--action .stat__label {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+}
+
+.stat--action:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}

@@ -14,4 +14,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # over default.conf, so one image serves both modes.
 COPY nginx-tls.conf /etc/nginx/nginx-tls.conf
 COPY proxy-headers.conf /etc/nginx/proxy-headers.conf
+COPY security-headers.conf /etc/nginx/security-headers.conf
+COPY security-headers-tls.conf /etc/nginx/security-headers-tls.conf
 EXPOSE 80

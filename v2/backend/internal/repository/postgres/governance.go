@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -135,10 +137,37 @@ func NewGovernanceRepository(db *pgxpool.Pool) *GovernanceRepository {
 	return &GovernanceRepository{db: db}
 }
 
-func (r *GovernanceRepository) RecentLogins(ctx context.Context, limit int) ([]domain.LoginAttemptRecord, error) {
+// loginAuditWhere is shared by the page query and the count so the two can
+// never be taken over different criteria.
+func loginAuditWhere(filter domain.LoginAuditFilter) (string, []any) {
+	var (
+		clauses []string
+		args    []any
+	)
+	if filter.Email != "" {
+		args = append(args, "%"+filter.Email+"%")
+		clauses = append(clauses, fmt.Sprintf("email ILIKE $%d", len(args)))
+	}
+	switch filter.Outcome {
+	case "success":
+		clauses = append(clauses, "success = true")
+	case "failed":
+		clauses = append(clauses, "success = false")
+	}
+	if len(clauses) == 0 {
+		return "", args
+	}
+	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func (r *GovernanceRepository) RecentLogins(ctx context.Context, filter domain.LoginAuditFilter) ([]domain.LoginAttemptRecord, error) {
+	where, args := loginAuditWhere(filter)
+	args = append(args, filter.Limit, filter.Offset)
 	rows, err := r.db.Query(ctx, `
 		SELECT id, COALESCE(email, ''), success, COALESCE(reason, ''), COALESCE(ip, ''), created_at
-		FROM login_audit ORDER BY created_at DESC LIMIT $1`, limit)
+		FROM login_audit`+where+
+		fmt.Sprintf(" ORDER BY created_at DESC, id DESC LIMIT $%d OFFSET $%d", len(args)-1, len(args)),
+		args...)
 	if err != nil {
 		return nil, err
 	}
@@ -153,6 +182,28 @@ func (r *GovernanceRepository) RecentLogins(ctx context.Context, limit int) ([]d
 		attempts = append(attempts, a)
 	}
 	return attempts, rows.Err()
+}
+
+// CountLoginOutcomes deliberately ignores filter.Outcome: the breakdown is the
+// control for that filter, so it has to keep showing both sides while one of
+// them is selected. Narrowing it by the same filter it drives would collapse
+// the other number to zero and leave no way back.
+func (r *GovernanceRepository) CountLoginOutcomes(ctx context.Context, filter domain.LoginAuditFilter) (int, int, error) {
+	filter.Outcome = ""
+	where, args := loginAuditWhere(filter)
+	var succeeded, failed int
+	err := r.db.QueryRow(ctx, `
+		SELECT COUNT(*) FILTER (WHERE success),
+		       COUNT(*) FILTER (WHERE NOT success)
+		FROM login_audit`+where, args...).Scan(&succeeded, &failed)
+	return succeeded, failed, err
+}
+
+func (r *GovernanceRepository) CountLogins(ctx context.Context, filter domain.LoginAuditFilter) (int, error) {
+	where, args := loginAuditWhere(filter)
+	var total int
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM login_audit"+where, args...).Scan(&total)
+	return total, err
 }
 
 func (r *APIKeyRepository) FindByHash(ctx context.Context, hash string) (*domain.APIKey, error) {

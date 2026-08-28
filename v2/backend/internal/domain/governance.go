@@ -77,7 +77,9 @@ type LoginAttemptRecord struct {
 }
 
 type GovernanceRepository interface {
-	RecentLogins(ctx context.Context, limit int) ([]LoginAttemptRecord, error)
+	RecentLogins(ctx context.Context, filter LoginAuditFilter) ([]LoginAttemptRecord, error)
+	CountLogins(ctx context.Context, filter LoginAuditFilter) (int, error)
+	CountLoginOutcomes(ctx context.Context, filter LoginAuditFilter) (succeeded, failed int, err error)
 }
 
 // MasterData is the tenant hierarchy shown on the Master Wilayah screen.
@@ -109,4 +111,15 @@ type MasterRepository interface {
 	CreateArea(ctx context.Context, a *Area) error
 	CreateChapter(ctx context.Context, c *Chapter) error
 	SetChapterActive(ctx context.Context, id string, active bool) error
+}
+
+// LoginAuditFilter narrows the login trail. Outcome is "success" or "failed":
+// the reason someone opens this screen is almost always to look at failures, so
+// making them siftable is the difference between an audit trail and a wall of
+// noise.
+type LoginAuditFilter struct {
+	Email   string
+	Outcome string
+	Limit   int
+	Offset  int
 }

@@ -3,8 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/usecase"
 )
@@ -92,8 +90,13 @@ func (h *AccountHandler) SetPassword(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
+	id, err := PathID(r, "id")
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
 	if err := h.accounts.SetPassword(r.Context(), scope, domain.Role(sess.Role),
-		chi.URLParam(r, "id"), req.Password); err != nil {
+		id, req.Password); err != nil {
 		WriteError(w, err)
 		return
 	}
@@ -115,8 +118,13 @@ func (h *AccountHandler) SetActive(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
+	id, err := PathID(r, "id")
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
 	if err := h.accounts.SetActive(r.Context(), scope, domain.Role(sess.Role),
-		chi.URLParam(r, "id"), req.IsActive); err != nil {
+		id, req.IsActive); err != nil {
 		WriteError(w, err)
 		return
 	}

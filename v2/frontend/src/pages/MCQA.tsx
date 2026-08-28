@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import Table from '../components/Table'
+import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 
 interface McqaVisitor {
@@ -23,7 +24,7 @@ interface Choice {
 export default function MCQA() {
   const [search, setSearch] = useState('')
   const [choices, setChoices] = useState<Choice[]>([])
-  const { items, total, loading, error, reload, setError } =
+  const { items, total, loading, error, reload, setError, page, setPage, pageSize, setPageSize } =
     useResource<McqaVisitor>('/mcqa', { q: search })
 
   // The labels come from the server so the UI cannot drift from the values the
@@ -95,6 +96,11 @@ export default function MCQA() {
             ),
           },
         ]}
+      />
+
+      <Pagination
+        page={page} pageSize={pageSize} total={total} shown={items.length}
+        onPage={setPage} onPageSize={setPageSize}
       />
     </>
   )

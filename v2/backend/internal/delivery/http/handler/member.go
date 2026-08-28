@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/usecase"
 )
@@ -63,7 +61,12 @@ func (h *MemberHandler) Get(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	m, err := h.members.Get(r.Context(), scope, chi.URLParam(r, "id"))
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	m, err := h.members.Get(r.Context(), scope, id)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -101,7 +104,12 @@ func (h *MemberHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	m, err := h.members.Update(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id"), req.toInput())
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	m, err := h.members.Update(r.Context(), scope, ActorFrom(r.Context()), id, req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -115,7 +123,12 @@ func (h *MemberHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	if err := h.members.Delete(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id")); err != nil {
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	if err := h.members.Delete(r.Context(), scope, ActorFrom(r.Context()), id); err != nil {
 		WriteError(w, err)
 		return
 	}

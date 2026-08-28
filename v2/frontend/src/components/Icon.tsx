@@ -10,6 +10,7 @@
 
 export type IconName =
   | 'check' | 'alert' | 'arrow-left' | 'arrow-right' | 'chevron-right'
+  | 'chevron-left' | 'chevrons-left' | 'chevrons-right'
   | 'volume-on' | 'volume-off' | 'menu' | 'close' | 'logout' | 'search'
   | 'download' | 'upload' | 'plus' | 'trash' | 'key' | 'shield' | 'map'
   | 'users' | 'calendar' | 'message' | 'clipboard' | 'chart' | 'board'
@@ -21,6 +22,9 @@ const PATHS: Record<IconName, string> = {
   'arrow-left': 'M19 12H5m7 7-7-7 7-7',
   'arrow-right': 'M5 12h14m-7-7 7 7-7 7',
   'chevron-right': 'm9 18 6-6-6-6',
+  'chevron-left': 'm15 18-6-6 6-6',
+  'chevrons-left': 'm11 17-5-5 5-5m7 10-5-5 5-5',
+  'chevrons-right': 'm13 17 5-5-5-5M6 17l5-5-5-5',
   'volume-on': 'M11 5 6 9H2v6h4l5 4V5zm4.5 3.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14',
   'volume-off': 'M11 5 6 9H2v6h4l5 4V5zm11 4-6 6m0-6 6 6',
   'menu': 'M3 12h18M3 6h18M3 18h18',

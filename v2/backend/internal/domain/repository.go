@@ -50,8 +50,19 @@ type VisitorRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// MeetingFilter exists so the meeting list is a window like every other list.
+// A chapter meeting weekly accumulates ~52 rows a year; returning all of them
+// forever is fine right up until it isn't, and by then the fix is a schema
+// change under a screen people depend on.
+type MeetingFilter struct {
+	Search string
+	Limit  int
+	Offset int
+}
+
 type MeetingRepository interface {
-	List(ctx context.Context, scope Scope) ([]Meeting, error)
+	List(ctx context.Context, scope Scope, filter MeetingFilter) ([]Meeting, error)
+	Count(ctx context.Context, scope Scope, filter MeetingFilter) (int, error)
 	FindByID(ctx context.Context, id string) (*Meeting, error)
 	Create(ctx context.Context, m *Meeting) error
 	Update(ctx context.Context, m *Meeting) error

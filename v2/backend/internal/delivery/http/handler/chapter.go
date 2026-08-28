@@ -49,7 +49,11 @@ func (h *ChapterHandler) ListMeetings(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	meetings, err := h.meetings.List(r.Context(), scope)
+	// This feeds meeting pickers, not a browsable list, so it takes the whole
+	// window at once rather than paging. Still capped: a picker that quietly
+	// truncates is bad, but one that loads an unbounded list is worse. Ordered
+	// newest first, which is what someone assigning a visit is reaching for.
+	meetings, err := h.meetings.List(r.Context(), scope, domain.MeetingFilter{Limit: 200})
 	if err != nil {
 		WriteError(w, err)
 		return

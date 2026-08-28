@@ -40,15 +40,26 @@ func RequireSameOrigin(allowed []string) func(http.Handler) http.Handler {
 
 			origin := r.Header.Get("Origin")
 			if origin == "" {
-				// Same-origin fetches from some clients omit Origin; fall back
-				// to Referer, and allow the request only if neither is present
-				// (a non-browser caller such as curl, which CSRF cannot target).
-				if ref := r.Header.Get("Referer"); ref != "" {
-					origin = originOf(ref)
-				} else {
-					next.ServeHTTP(w, r)
-					return
-				}
+				// Referer is a fallback, not a reliable one: this API answers
+				// with Referrer-Policy: no-referrer, so a browser sends none.
+				// It is read anyway for clients that ignore that.
+				origin = originOf(r.Header.Get("Referer"))
+			}
+
+			// No Origin and no Referer is refused rather than waved through.
+			// The earlier reasoning — that only a non-browser caller omits
+			// Origin, and CSRF cannot target one — holds for browsers as they
+			// behave today, but it makes the guard depend on the absence of a
+			// header: anything that strips Origin in transit, a corporate
+			// proxy or a privacy extension, turns the check off silently.
+			//
+			// Nothing legitimate lands here. Every browser sends Origin on a
+			// cross-origin state change, and on a same-origin one too since
+			// 2020. A server-to-server caller has the key-authenticated API
+			// under /external, which this middleware does not cover.
+			if origin == "" {
+				forbidden(w, "Origin tidak diizinkan.")
+				return
 			}
 
 			if !slices.Contains(allowed, origin) {

@@ -62,9 +62,13 @@ func TestRequireSameOrigin(t *testing.T) {
 		{"falls back to Referer", http.MethodPost, "", "http://localhost:8095/visitors", http.StatusOK},
 		{"a foreign Referer is refused", http.MethodPost, "", "https://penyerang.example/x", http.StatusForbidden},
 
-		// A caller with neither header is not a browser, so there is no
-		// ambient session for CSRF to ride on.
-		{"no Origin and no Referer passes", http.MethodPost, "", "", http.StatusOK},
+		// A write with neither header is refused. It used to pass, on the
+		// reasoning that only a non-browser caller omits both — but that makes
+		// the guard depend on the absence of a header, so anything that strips
+		// Origin in transit disables it silently. Server-to-server callers use
+		// the key-authenticated API, which this middleware does not cover.
+		{"no Origin and no Referer is refused", http.MethodPost, "", "", http.StatusForbidden},
+		{"a GET with neither header still passes", http.MethodGet, "", "", http.StatusOK},
 	}
 
 	for _, tc := range tests {

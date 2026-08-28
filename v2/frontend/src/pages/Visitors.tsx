@@ -1,48 +1,36 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { api } from '../api/client'
-import { STATUS_LABEL, type ListResult, type Visitor, type VisitorStatus } from '../api/types'
+import Pagination from '../components/Pagination'
+import { useResource } from '../hooks/useResource'
+import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
 
 export default function Visitors() {
-  const [visitors, setVisitors] = useState<Visitor[]>([])
-  const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const {
+    items: visitors, total, loading, error, reload: load, setError,
+    page, setPage, pageSize, setPageSize,
+  } = useResource<Visitor>('/visitors', { status, q: search.trim() })
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const params = new URLSearchParams()
-      if (status) params.set('status', status)
-      if (search.trim()) params.set('q', search.trim())
-      const query = params.toString()
-      const res = await api.get<ListResult<Visitor>>(`/visitors${query ? `?${query}` : ''}`)
-      setVisitors(res.data)
-      setTotal(res.total)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal memuat data.')
-    } finally {
-      setLoading(false)
-    }
-  }, [status, search])
-
-  // Debounced so typing in the search box does not fire a request per keystroke.
-  useEffect(() => {
-    const timer = setTimeout(() => void load(), 300)
-    return () => clearTimeout(timer)
-  }, [load])
+  const [pending, setPending] = useState<Record<string, VisitorStatus>>({})
 
   const changeStatus = async (visitor: Visitor, next: VisitorStatus) => {
-    // Optimistic: the row updates immediately and is rolled back by a reload if
-    // the server rejects it.
-    setVisitors(prev => prev.map(v => (v.id === visitor.id ? { ...v, status: next } : v)))
+    // Optimistic: the row shows the new status immediately and is cleared by a
+    // reload either way, so a rejected change cannot leave a stale value on
+    // screen. Held separately from the fetched list because that list is owned
+    // by the hook and is replaced wholesale on the next page or filter change.
+    setPending(prev => ({ ...prev, [visitor.id]: next }))
     try {
       await api.patch(`/visitors/${visitor.id}`, { ...visitor, status: next })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengubah status.')
-      void load()
+    } finally {
+      await load()
+      setPending(prev => {
+        const rest = { ...prev }
+        delete rest[visitor.id]
+        return rest
+      })
     }
   }
 
@@ -64,8 +52,6 @@ export default function Visitors() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-
-      <p className="muted small">Menampilkan {visitors.length} dari {total} visitor</p>
 
       {loading ? (
         <p className="muted">Memuat…</p>
@@ -94,7 +80,7 @@ export default function Visitors() {
                   <td>{v.pic_name || <span className="muted">Belum ada</span>}</td>
                   <td>
                     <select
-                      value={v.status}
+                      value={pending[v.id] ?? v.status}
                       onChange={e => void changeStatus(v, e.target.value as VisitorStatus)}
                       aria-label={`Status ${v.name}`}
                     >
@@ -109,6 +95,11 @@ export default function Visitors() {
           </table>
         </div>
       )}
+
+      <Pagination
+        page={page} pageSize={pageSize} total={total} shown={visitors.length}
+        onPage={setPage} onPageSize={setPageSize}
+      />
     </>
   )
 }

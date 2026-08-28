@@ -3,8 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/usecase"
 )
@@ -47,7 +45,12 @@ func (h *MessagingHandler) SaveTemplate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// An empty id means create; chi gives "" on the collection route.
-	t, err := h.messaging.SaveTemplate(r.Context(), scope, chi.URLParam(r, "id"), req.Name, req.Body, req.IsDefault)
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	t, err := h.messaging.SaveTemplate(r.Context(), scope, id, req.Name, req.Body, req.IsDefault)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -61,7 +64,12 @@ func (h *MessagingHandler) DeleteTemplate(w http.ResponseWriter, r *http.Request
 		WriteError(w, err)
 		return
 	}
-	if err := h.messaging.DeleteTemplate(r.Context(), scope, chi.URLParam(r, "id")); err != nil {
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	if err := h.messaging.DeleteTemplate(r.Context(), scope, id); err != nil {
 		WriteError(w, err)
 		return
 	}

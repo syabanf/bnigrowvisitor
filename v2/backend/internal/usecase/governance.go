@@ -174,12 +174,30 @@ func (uc *GovernanceUsecase) DeleteAPIKey(ctx context.Context, role domain.Role,
 	return uc.keys.Delete(ctx, id)
 }
 
-func (uc *GovernanceUsecase) RecentLogins(ctx context.Context, role domain.Role, limit int) ([]domain.LoginAttemptRecord, error) {
+type LoginAuditPage struct {
+	Data      []domain.LoginAttemptRecord `json:"data"`
+	Total     int                         `json:"total"`
+	Succeeded int                         `json:"succeeded"`
+	Failed    int                         `json:"failed"`
+}
+
+func (uc *GovernanceUsecase) RecentLogins(ctx context.Context, role domain.Role, filter domain.LoginAuditFilter) (*LoginAuditPage, error) {
 	if err := requireNational(role); err != nil {
 		return nil, err
 	}
-	if limit <= 0 || limit > 500 {
-		limit = 100
+	filter.Limit, filter.Offset = clampPage(filter.Limit, filter.Offset)
+
+	total, err := uc.audit.CountLogins(ctx, filter)
+	if err != nil {
+		return nil, err
 	}
-	return uc.audit.RecentLogins(ctx, limit)
+	logins, err := uc.audit.RecentLogins(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	succeeded, failed, err := uc.audit.CountLoginOutcomes(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	return &LoginAuditPage{Data: logins, Total: total, Succeeded: succeeded, Failed: failed}, nil
 }

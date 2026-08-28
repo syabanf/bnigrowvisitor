@@ -3,8 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/usecase"
 )
@@ -58,7 +56,12 @@ func (h *MCQAHandler) Record(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	visitor, err := h.visitors.RecordAirtime(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id"), req.Choice)
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	visitor, err := h.visitors.RecordAirtime(r.Context(), scope, ActorFrom(r.Context()), id, req.Choice)
 	if err != nil {
 		WriteError(w, err)
 		return

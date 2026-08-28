@@ -84,7 +84,18 @@ type ActivityLog struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// ActivityFilter narrows the audit trail. Without Count alongside List the UI
+// can only report how many rows one page happens to hold, which reads as a
+// total and is wrong the moment the table outgrows a page.
+type ActivityFilter struct {
+	Action string
+	Entity string
+	Limit  int
+	Offset int
+}
+
 type ActivityLogRepository interface {
 	Record(ctx context.Context, entry ActivityLog) error
-	List(ctx context.Context, scope Scope, limit int) ([]ActivityLog, error)
+	List(ctx context.Context, scope Scope, filter ActivityFilter) ([]ActivityLog, error)
+	Count(ctx context.Context, scope Scope, filter ActivityFilter) (int, error)
 }

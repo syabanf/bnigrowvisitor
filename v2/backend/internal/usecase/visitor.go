@@ -31,6 +31,15 @@ type ListVisitorsResult struct {
 func (uc *VisitorUsecase) List(ctx context.Context, scope domain.Scope, filter domain.VisitorFilter) (*ListVisitorsResult, error) {
 	filter.Limit, filter.Offset = clampPage(filter.Limit, filter.Offset)
 
+	// status is a Postgres enum, so an unknown value is a type error rather
+	// than an empty result. Left to the database it surfaces as a 500 and
+	// writes the caller's string into the error log — a request that is merely
+	// wrong should not read as the server breaking, and should not let anyone
+	// choose what goes in the log.
+	if filter.Status != "" && !domain.VisitorStatus(filter.Status).Valid() {
+		return nil, domain.ErrValidation
+	}
+
 	items, err := uc.visitors.List(ctx, scope, filter)
 	if err != nil {
 		return nil, err

@@ -3,8 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 )
 
@@ -23,12 +21,24 @@ func (h *MeetingHandler) List(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	meetings, err := h.meetings.List(r.Context(), scope)
+	limit, offset := PageWindow(r.URL.Query().Get("limit"), r.URL.Query().Get("offset"))
+	filter := domain.MeetingFilter{
+		Search: r.URL.Query().Get("q"), Limit: limit, Offset: offset,
+	}
+
+	total, err := h.meetings.Count(r.Context(), scope, filter)
 	if err != nil {
 		WriteError(w, err)
 		return
 	}
-	WriteJSON(w, http.StatusOK, map[string]any{"data": meetings, "total": len(meetings)})
+	meetings, err := h.meetings.List(r.Context(), scope, filter)
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]any{
+		"data": meetings, "total": total, "limit": limit, "offset": offset,
+	})
 }
 
 type meetingRequest struct {
@@ -79,7 +89,12 @@ func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	existing, err := h.meetings.FindByID(r.Context(), chi.URLParam(r, "id"))
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	existing, err := h.meetings.FindByID(r.Context(), id)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -116,7 +131,12 @@ func (h *MeetingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	existing, err := h.meetings.FindByID(r.Context(), chi.URLParam(r, "id"))
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	existing, err := h.meetings.FindByID(r.Context(), id)
 	if err != nil {
 		WriteError(w, err)
 		return

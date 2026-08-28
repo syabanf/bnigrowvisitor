@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import Table from '../components/Table'
+import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 
 interface Meeting {
@@ -11,7 +12,7 @@ interface Meeting {
 }
 
 export default function Meetings() {
-  const { items, total, loading, error, reload, setError } = useResource<Meeting>('/meetings', {})
+  const { items, total, loading, error, reload, setError, page, setPage, pageSize, setPageSize } = useResource<Meeting>('/meetings', {})
   const [form, setForm] = useState({ title: '', meeting_date: '', location: '' })
   const [saving, setSaving] = useState(false)
 
@@ -100,6 +101,11 @@ export default function Meetings() {
             ),
           },
         ]}
+      />
+
+      <Pagination
+        page={page} pageSize={pageSize} total={total} shown={items.length}
+        onPage={setPage} onPageSize={setPageSize}
       />
     </>
   )

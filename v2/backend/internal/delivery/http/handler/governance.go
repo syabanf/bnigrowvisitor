@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/usecase"
 )
@@ -98,7 +96,12 @@ func (h *GovernanceHandler) SetChapterActive(w http.ResponseWriter, r *http.Requ
 		WriteError(w, err)
 		return
 	}
-	if err := h.governance.SetChapterActive(r.Context(), role(r), chi.URLParam(r, "id"), req.IsActive); err != nil {
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	if err := h.governance.SetChapterActive(r.Context(), role(r), id, req.IsActive); err != nil {
 		WriteError(w, err)
 		return
 	}
@@ -171,7 +174,12 @@ func (h *GovernanceHandler) SetAPIKeyActive(w http.ResponseWriter, r *http.Reque
 		WriteError(w, err)
 		return
 	}
-	if err := h.governance.SetAPIKeyActive(r.Context(), role(r), chi.URLParam(r, "id"), req.IsActive); err != nil {
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	if err := h.governance.SetAPIKeyActive(r.Context(), role(r), id, req.IsActive); err != nil {
 		WriteError(w, err)
 		return
 	}
@@ -179,7 +187,12 @@ func (h *GovernanceHandler) SetAPIKeyActive(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *GovernanceHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request) {
-	if err := h.governance.DeleteAPIKey(r.Context(), role(r), chi.URLParam(r, "id")); err != nil {
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	if err := h.governance.DeleteAPIKey(r.Context(), role(r), id); err != nil {
 		WriteError(w, err)
 		return
 	}
@@ -187,10 +200,17 @@ func (h *GovernanceHandler) DeleteAPIKey(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *GovernanceHandler) Logins(w http.ResponseWriter, r *http.Request) {
-	logins, err := h.governance.RecentLogins(r.Context(), role(r), atoi(r.URL.Query().Get("limit")))
+	q := r.URL.Query()
+	limit, offset := PageWindow(q.Get("limit"), q.Get("offset"))
+	page, err := h.governance.RecentLogins(r.Context(), role(r), domain.LoginAuditFilter{
+		Email:   q.Get("q"),
+		Outcome: q.Get("outcome"),
+		Limit:   limit,
+		Offset:  offset,
+	})
 	if err != nil {
 		WriteError(w, err)
 		return
 	}
-	WriteJSON(w, http.StatusOK, map[string]any{"data": logins, "total": len(logins)})
+	WriteJSON(w, http.StatusOK, page)
 }

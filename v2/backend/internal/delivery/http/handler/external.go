@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
 	"bni-visitor/internal/domain"
 )
 
@@ -84,7 +82,12 @@ func (h *ExternalHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ExternalHandler) GetMember(w http.ResponseWriter, r *http.Request) {
-	member, err := h.members.FindByID(r.Context(), chi.URLParam(r, "id"))
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	member, err := h.members.FindByID(r.Context(), id)
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -100,7 +103,12 @@ type renewalRequest struct {
 // Renew records a completed membership renewal. This is the write the finance
 // integration exists for, which is why the key's scope is checked at the route.
 func (h *ExternalHandler) Renew(w http.ResponseWriter, r *http.Request) {
-	member, err := h.members.FindByID(r.Context(), chi.URLParam(r, "id"))
+	id, idErr := PathID(r, "id")
+	if idErr != nil {
+		WriteError(w, idErr)
+		return
+	}
+	member, err := h.members.FindByID(r.Context(), id)
 	if err != nil {
 		WriteError(w, err)
 		return

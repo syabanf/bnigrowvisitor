@@ -3,6 +3,8 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,14 +16,31 @@ type MeetingRepository struct{ db *pgxpool.Pool }
 
 func NewMeetingRepository(db *pgxpool.Pool) *MeetingRepository { return &MeetingRepository{db: db} }
 
-func (r *MeetingRepository) List(ctx context.Context, scope domain.Scope) ([]domain.Meeting, error) {
-	query := `SELECT id, chapter_id, title, meeting_date, COALESCE(location, ''), created_at FROM meetings`
-	args := []any{}
+func meetingWhere(scope domain.Scope, filter domain.MeetingFilter) (string, []any) {
+	var (
+		clauses []string
+		args    []any
+	)
 	if scope.ChapterID != nil {
-		query += ` WHERE chapter_id = $1`
 		args = append(args, *scope.ChapterID)
+		clauses = append(clauses, fmt.Sprintf("chapter_id = $%d", len(args)))
 	}
-	query += ` ORDER BY meeting_date DESC`
+	if filter.Search != "" {
+		args = append(args, "%"+filter.Search+"%")
+		clauses = append(clauses, fmt.Sprintf("(title ILIKE $%d OR location ILIKE $%d)", len(args), len(args)))
+	}
+	if len(clauses) == 0 {
+		return "", args
+	}
+	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func (r *MeetingRepository) List(ctx context.Context, scope domain.Scope, filter domain.MeetingFilter) ([]domain.Meeting, error) {
+	where, args := meetingWhere(scope, filter)
+	args = append(args, filter.Limit, filter.Offset)
+	query := `SELECT id, chapter_id, title, meeting_date, COALESCE(location, ''), created_at FROM meetings` +
+		where +
+		fmt.Sprintf(" ORDER BY meeting_date DESC, id DESC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
@@ -38,6 +57,13 @@ func (r *MeetingRepository) List(ctx context.Context, scope domain.Scope) ([]dom
 		meetings = append(meetings, m)
 	}
 	return meetings, rows.Err()
+}
+
+func (r *MeetingRepository) Count(ctx context.Context, scope domain.Scope, filter domain.MeetingFilter) (int, error) {
+	where, args := meetingWhere(scope, filter)
+	var total int
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM meetings"+where, args...).Scan(&total)
+	return total, err
 }
 
 func (r *MeetingRepository) FindByID(ctx context.Context, id string) (*domain.Meeting, error) {

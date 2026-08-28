@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Table from '../components/Table'
+import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 
 interface Guest {
@@ -18,7 +19,7 @@ interface Guest {
 
 export default function Guests() {
   const [search, setSearch] = useState('')
-  const { items, total, loading, error } = useResource<Guest>('/guests', { q: search })
+  const { items, total, loading, error, page, setPage, pageSize, setPageSize } = useResource<Guest>('/guests', { q: search })
 
   return (
     <>
@@ -61,6 +62,11 @@ export default function Guests() {
             render: g => (g.meeting_format ? <span className="pill">{g.meeting_format}</span> : '—'),
           },
         ]}
+      />
+
+      <Pagination
+        page={page} pageSize={pageSize} total={total} shown={items.length}
+        onPage={setPage} onPageSize={setPageSize}
       />
     </>
   )

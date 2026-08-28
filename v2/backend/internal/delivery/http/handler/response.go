@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"log/slog"
 	"net/http"
 
@@ -82,4 +84,46 @@ func ActorFrom(ctx context.Context) usecase.Actor {
 		return usecase.Actor{}
 	}
 	return usecase.Actor{ID: p.Sub, Name: p.Email, Role: p.Role}
+}
+
+// PageWindow bounds a limit/offset pair coming off the query string. The use
+// cases clamp their own windows; this exists for the handlers that talk to a
+// repository directly, so no route can be talked into reading a whole table.
+//
+// Malformed input is treated as unset rather than rejected — a stray query
+// parameter should not fail a read.
+func PageWindow(limitRaw, offsetRaw string) (int, int) {
+	const (
+		defaultLimit = 50
+		maxLimit     = 200
+		maxOffset    = 100_000
+	)
+	limit := atoi(limitRaw)
+	if limit <= 0 || limit > maxLimit {
+		limit = defaultLimit
+	}
+	offset := atoi(offsetRaw)
+	if offset < 0 {
+		offset = 0
+	}
+	// A deep offset makes Postgres walk every row it skips, so an unbounded one
+	// is a cheap way to make the database do expensive work.
+	if offset > maxOffset {
+		offset = maxOffset
+	}
+	return limit, offset
+}
+
+// PathID reads a uuid path segment.
+//
+// A segment that is not a uuid cannot name a row, so it is a miss, not a server
+// error. Left to Postgres it becomes SQLSTATE 22P02 — a 500, and a log line
+// holding whatever the caller put in the URL. Checking the shape here means the
+// query is never issued at all.
+func PathID(r *http.Request, key string) (string, error) {
+	raw := chi.URLParam(r, key)
+	if _, err := uuid.Parse(raw); err != nil {
+		return "", domain.ErrNotFound
+	}
+	return raw, nil
 }

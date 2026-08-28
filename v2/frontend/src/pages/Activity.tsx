@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import Table from '../components/Table'
+import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 
 interface LogEntry {
@@ -17,16 +19,42 @@ const ACTION_LABEL: Record<string, string> = {
   delete: 'Hapus',
 }
 
+const ENTITY_LABEL: Record<string, string> = {
+  visitor: 'Visitor',
+  member: 'Member',
+  guest: 'Tamu',
+  meeting: 'Meeting',
+  user: 'Akun',
+}
+
 export default function Activity() {
-  const { items, total, loading, error } = useResource<LogEntry>('/activity', {})
+  const [action, setAction] = useState('')
+  const [entity, setEntity] = useState('')
+  const {
+    items, total, loading, error, page, setPage, pageSize, setPageSize,
+  } = useResource<LogEntry>('/activity', { action, entity })
 
   return (
     <>
       <h1>Log Aktivitas</h1>
       <p className="muted small">Jejak perubahan data di chapter ini.</p>
 
+      <div className="filters">
+        <select value={action} onChange={e => setAction(e.target.value)} aria-label="Filter aksi">
+          <option value="">Semua Aksi</option>
+          {Object.entries(ACTION_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+        <select value={entity} onChange={e => setEntity(e.target.value)} aria-label="Filter objek">
+          <option value="">Semua Objek</option>
+          {Object.entries(ENTITY_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+      </div>
+
       {error && <div className="alert">{error}</div>}
-      <p className="muted small">{total} entri terakhir</p>
 
       <Table
         rows={items}
@@ -53,9 +81,14 @@ export default function Activity() {
             key: 'action', header: 'Aksi',
             render: l => <span className="pill">{ACTION_LABEL[l.action] ?? l.action}</span>,
           },
-          { key: 'entity', header: 'Objek', render: l => l.entity },
+          { key: 'entity', header: 'Objek', render: l => ENTITY_LABEL[l.entity] ?? l.entity },
           { key: 'label', header: 'Detail', render: l => l.entity_label || '—' },
         ]}
+      />
+
+      <Pagination
+        page={page} pageSize={pageSize} total={total} shown={items.length}
+        onPage={setPage} onPageSize={setPageSize}
       />
     </>
   )

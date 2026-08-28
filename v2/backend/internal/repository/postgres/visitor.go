@@ -161,8 +161,24 @@ func (r *VisitorRepository) Delete(ctx context.Context, id string) error {
 // this layer has to import a Postgres package to understand what went wrong.
 func translate(err error) error {
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+	if !errors.As(err, &pgErr) {
+		return err
+	}
+	switch pgErr.Code {
+	case "23505":
 		return domain.ErrConflict
+	case "22P02", "22003":
+		// invalid_text_representation and numeric_value_out_of_range: a
+		// malformed uuid, an unknown enum label, a number too large for the
+		// column. Every one is a client mistake, but left alone it arrives as
+		// an unhandled error — a 500, plus a log line containing whatever
+		// string the caller sent, which lets anyone choose what goes in the
+		// error log and bury a real failure underneath it.
+		//
+		// A net, not the fix: these values are still validated where they
+		// enter. It is here so the next filter someone adds cannot reopen the
+		// same hole by forgetting.
+		return domain.ErrValidation
 	}
 	return err
 }

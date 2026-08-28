@@ -31,6 +31,10 @@ type ListMembersResult struct {
 func (uc *MemberUsecase) List(ctx context.Context, scope domain.Scope, filter domain.MemberFilter) (*ListMembersResult, error) {
 	filter.Limit, filter.Offset = clampPage(filter.Limit, filter.Offset)
 
+	if filter.Status != "" && !domain.MemberStatus(filter.Status).Valid() {
+		return nil, domain.ErrValidation
+	}
+
 	items, err := uc.members.List(ctx, scope, filter)
 	if err != nil {
 		return nil, err

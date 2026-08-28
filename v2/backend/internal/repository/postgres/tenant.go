@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -143,18 +144,40 @@ func (r *ActivityLogRepository) Record(ctx context.Context, e domain.ActivityLog
 	return err
 }
 
-func (r *ActivityLogRepository) List(ctx context.Context, scope domain.Scope, limit int) ([]domain.ActivityLog, error) {
+// activityWhere builds the shared predicate so List and Count can never drift
+// apart — a count taken over different criteria than the page is worse than no
+// count at all.
+func activityWhere(scope domain.Scope, filter domain.ActivityFilter) (string, []any) {
+	var (
+		clauses []string
+		args    []any
+	)
+	if scope.ChapterID != nil {
+		args = append(args, *scope.ChapterID)
+		clauses = append(clauses, fmt.Sprintf("chapter_id = $%d", len(args)))
+	}
+	if filter.Action != "" {
+		args = append(args, filter.Action)
+		clauses = append(clauses, fmt.Sprintf("action = $%d", len(args)))
+	}
+	if filter.Entity != "" {
+		args = append(args, filter.Entity)
+		clauses = append(clauses, fmt.Sprintf("entity = $%d", len(args)))
+	}
+	if len(clauses) == 0 {
+		return "", args
+	}
+	return " WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func (r *ActivityLogRepository) List(ctx context.Context, scope domain.Scope, filter domain.ActivityFilter) ([]domain.ActivityLog, error) {
+	where, args := activityWhere(scope, filter)
+	args = append(args, filter.Limit, filter.Offset)
 	query := `
 		SELECT id, actor_id, COALESCE(actor_name, ''), COALESCE(actor_role, ''), chapter_id,
 		       action, entity, entity_id, COALESCE(entity_label, ''), created_at
-		FROM activity_logs`
-	var args []any
-	if scope.ChapterID != nil {
-		args = append(args, *scope.ChapterID)
-		query += ` WHERE chapter_id = $1`
-	}
-	args = append(args, limit)
-	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d", len(args))
+		FROM activity_logs` + where +
+		fmt.Sprintf(" ORDER BY created_at DESC, id DESC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
@@ -172,4 +195,11 @@ func (r *ActivityLogRepository) List(ctx context.Context, scope domain.Scope, li
 		logs = append(logs, l)
 	}
 	return logs, rows.Err()
+}
+
+func (r *ActivityLogRepository) Count(ctx context.Context, scope domain.Scope, filter domain.ActivityFilter) (int, error) {
+	where, args := activityWhere(scope, filter)
+	var total int
+	err := r.db.QueryRow(ctx, "SELECT COUNT(*) FROM activity_logs"+where, args...).Scan(&total)
+	return total, err
 }
