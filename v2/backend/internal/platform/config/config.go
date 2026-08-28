@@ -23,6 +23,13 @@ type Config struct {
 	// must be the address a visitor's phone can reach, which is not the same as
 	// the address the API is bound to.
 	PublicBaseURL string
+
+	// Narration for the quick tour. Optional: with no key the tour falls back
+	// to the browser's own speech synthesis, so the feature degrades rather
+	// than disappearing.
+	ElevenLabsKey     string
+	ElevenLabsVoiceID string
+	ElevenLabsModelID string
 }
 
 func Load() (*Config, error) {
@@ -32,6 +39,10 @@ func Load() (*Config, error) {
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 		Environment:   env("APP_ENV", "development"),
 		PublicBaseURL: env("PUBLIC_BASE_URL", "http://localhost:8095"),
+
+		ElevenLabsKey:     os.Getenv("ELEVENLABS_API_KEY"),
+		ElevenLabsVoiceID: os.Getenv("ELEVENLABS_VOICE_ID"),
+		ElevenLabsModelID: env("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
 		AllowedOrigins: splitOrigins(env("CORS_ORIGIN", "http://localhost:8095,http://localhost:5173")),
 	}
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/client'
+import Icon from '../components/Icon'
 
 interface Organization { id: string; name: string; code: string }
 interface City { id: string; organization_id: string; name: string }
@@ -70,7 +71,15 @@ export default function Master() {
   return (
     <>
       <h1>Master Wilayah</h1>
-      <p className="muted small">Struktur tenant: organisasi → kota → area → chapter.</p>
+      <p className="muted small breadcrumb">
+        Struktur tenant:
+        {['Organisasi', 'Kota', 'Area', 'Chapter'].map((level, i) => (
+          <span key={level}>
+            {i > 0 && <Icon name="chevron-right" size={0.8} />}
+            {level}
+          </span>
+        ))}
+      </p>
       {error && <div className="alert">{error}</div>}
 
       <section className="card">

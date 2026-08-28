@@ -59,7 +59,7 @@ export default function Dashboard() {
         <Stat label="Perlu Follow Up" value={stats.need_follow_up} tone="warn" hint="status baru / follow up" />
         <Stat label="Belum Ada PIC" value={stats.unassigned} tone="warn" />
         <Stat label="Jadi Member" value={stats.became_member} tone="good" />
-        <Stat label="Konversi" value={`${data.conversion_rate.toFixed(1)}%`} hint="visitor → member" />
+        <Stat label="Konversi" value={`${data.conversion_rate.toFixed(1)}%`} hint="visitor jadi member" />
         <Stat label="Kehadiran" value={`${data.attendance_rate.toFixed(1)}%`} hint="dari yang konfirmasi" />
         <Stat label="Member Aktif" value={`${stats.active_members} / ${stats.total_members}`} />
         <Stat label="Renewal < 30 Hari" value={stats.renewal_due_soon} tone={stats.renewal_due_soon > 0 ? 'warn' : undefined} />

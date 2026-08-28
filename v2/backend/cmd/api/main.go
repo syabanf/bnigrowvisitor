@@ -84,6 +84,7 @@ func run(logger *slog.Logger) error {
 	messagingUC := usecase.NewMessagingUsecase(templates, visitors, chapters, cfg.PublicBaseURL)
 	transferUC := usecase.NewTransferUsecase(visitors, members, chapters)
 	governanceUC := usecase.NewGovernanceUsecase(master, policies, apiKeys, governance)
+	narrationUC := usecase.NewNarrationUsecase(cfg.ElevenLabsKey, cfg.ElevenLabsVoiceID, cfg.ElevenLabsModelID)
 
 	secureCookies := cfg.Environment == "production"
 	router := nethttp.NewRouter(nethttp.Handlers{
@@ -102,6 +103,7 @@ func run(logger *slog.Logger) error {
 		Activity:  handler.NewActivityHandler(activity),
 		Public:     handler.NewPublicHandler(visitorUC),
 		Governance: handler.NewGovernanceHandler(governanceUC),
+		Narration:  handler.NewNarrationHandler(narrationUC),
 	}, sessions, users, cfg.AllowedOrigins)
 
 	srv := &http.Server{

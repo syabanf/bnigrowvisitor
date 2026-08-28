@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from '../components/Icon'
 
 interface ConfirmResult {
   status: 'confirmed' | 'already'
@@ -30,7 +31,7 @@ export default function Confirm({ token }: { token: string }) {
       <div className="login__card center">
         {error ? (
           <>
-            <div className="confirm__icon confirm__icon--bad">!</div>
+            <div className="confirm__icon confirm__icon--bad"><Icon name="alert" size={1.6} /></div>
             <h1>Link tidak dikenali</h1>
             <p className="muted">
               Link konfirmasi ini tidak valid atau sudah tidak berlaku. Hubungi PIC yang
@@ -41,7 +42,7 @@ export default function Confirm({ token }: { token: string }) {
           <p className="muted">Memproses…</p>
         ) : (
           <>
-            <div className="confirm__icon">✓</div>
+            <div className="confirm__icon"><Icon name="check" size={1.6} /></div>
             <h1>{result.status === 'confirmed' ? 'Terima kasih!' : 'Sudah tercatat'}</h1>
             <p className="muted">
               {result.status === 'confirmed'

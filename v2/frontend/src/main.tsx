@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth'
 import Layout from './components/Layout'
+import QuickTour from './tour/QuickTour'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Visitors from './pages/Visitors'
@@ -43,8 +44,10 @@ function App() {
   const isNational = user.role === 'national_admin' || user.role === 'admin'
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
+    <>
+      <QuickTour />
+      <Routes>
+        <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="pipeline" element={<Pipeline />} />
         <Route path="visitors" element={<Visitors />} />
@@ -68,7 +71,8 @@ function App() {
         <Route path="api-keys" element={isNational ? <ApiKeys /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   )
 }
 

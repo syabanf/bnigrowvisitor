@@ -31,6 +31,7 @@ type Handlers struct {
 	Activity  *handler.ActivityHandler
 	Public     *handler.PublicHandler
 	Governance *handler.GovernanceHandler
+	Narration  *handler.NarrationHandler
 }
 
 func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionValidator, allowedOrigins []string) http.Handler {
@@ -157,6 +158,14 @@ func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionVa
 			})
 
 			private.Get("/governance/logins", h.Governance.Logins)
+
+			private.Get("/narration/status", h.Narration.Status)
+			// Throttled separately from login: every call spends provider
+			// credits, so a stuck client must not drain the quota.
+			private.Group(func(n chi.Router) {
+				n.Use(httprate.LimitByIP(60, time.Minute))
+				n.Post("/narration", h.Narration.Speak)
+			})
 
 			private.Get("/pics", h.Account.ListPICs)
 			private.Post("/account/change-password", h.Account.ChangeOwnPassword)

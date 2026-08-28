@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
+import Icon from '../components/Icon'
 import { STATUS_LABEL, type ListResult, type Visitor, type VisitorStatus } from '../api/types'
 
 // The funnel, in order. Terminal states sit at the end so the board reads left
@@ -94,13 +95,13 @@ export default function Pipeline() {
                             disabled={COLUMNS.indexOf(status) === 0}
                             aria-label={`Mundurkan ${v.name}`}
                             onClick={() => void move(v, -1)}
-                          >←</button>
+                          ><Icon name="arrow-left" /></button>
                           <button
                             className="btn btn--small"
                             disabled={COLUMNS.indexOf(status) === COLUMNS.length - 1}
                             aria-label={`Majukan ${v.name}`}
                             onClick={() => void move(v, 1)}
-                          >→</button>
+                          ><Icon name="arrow-right" /></button>
                         </div>
                       </article>
                     ))

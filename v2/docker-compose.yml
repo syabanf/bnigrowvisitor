@@ -32,6 +32,10 @@ services:
       # Every origin the app is actually served from. Missing one here blocks
       # the real users, not an attacker — the SPA origin must be listed.
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8095,http://localhost:5173}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8095}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
+      ELEVENLABS_MODEL_ID: ${ELEVENLABS_MODEL_ID:-}
     depends_on:
       # Waits for the healthcheck, not just for the container to exist —
       # otherwise the API races the schema and exits on a failed ping.
