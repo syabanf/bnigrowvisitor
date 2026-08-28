@@ -4,8 +4,13 @@ import { useAuth } from '../auth'
 const CHAPTER_NAV = [
   { to: '/', label: 'Dashboard', end: true },
   { to: '/visitors', label: 'Visitor' },
+  { to: '/mcqa', label: 'MCQA' },
   { to: '/members', label: 'Member' },
   { to: '/guests', label: 'Guest' },
+  { to: '/meetings', label: 'Meeting' },
+  { to: '/wa-blast', label: 'WA Blast' },
+  { to: '/transfer', label: 'Export/Import' },
+  { to: '/activity', label: 'Log' },
   { to: '/accounts', label: 'Akun' },
 ]
 

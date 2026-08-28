@@ -30,7 +30,9 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://${POSTGRES_USER:-bni}:${POSTGRES_PASSWORD:-bni_dev_password}@db:5432/${POSTGRES_DB:-bni_visitor}?sslmode=disable
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET wajib diset — lihat .env.example}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      # Every origin the app is actually served from. Missing one here blocks
+      # the real users, not an attacker — the SPA origin must be listed.
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8095,http://localhost:5173}
     depends_on:
       # Waits for the healthcheck, not just for the container to exist —
       # otherwise the API races the schema and exits on a failed ping.

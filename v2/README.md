@@ -4,9 +4,9 @@ Penulisan ulang aplikasi Next.js di root repo ini, memakai **Vite + React** di
 depan, **Go clean architecture** di belakang, dan **PostgreSQL** langsung
 (bukan Supabase).
 
-> **Status: modul inti selesai.** Auth, Visitor, Member, Guest, dashboard
-> chapter, dashboard nasional, dan pengelolaan akun sudah utuh dari database
-> sampai UI. Sisanya di [Peta jalan](#peta-jalan).
+> **Status: paritas fitur tercapai.** Semua modul aplikasi Next.js sudah diport
+> dan berjalan dari database sampai UI. Yang tersisa bukan fitur — lihat
+> [Peta jalan](#peta-jalan).
 
 ## Menjalankan
 
@@ -93,12 +93,44 @@ yang pernah dirangkai; tidak ada input pemanggil yang masuk ke teks SQL.
 |---|---|---|
 | Auth (login, sesi, ganti password sendiri) | ✅ | ✅ |
 | Visitor | ✅ CRUD, filter, cari | ✅ |
+| MCQA (hasil airtime) | ✅ | ✅ |
 | Member (termasuk penanda renewal) | ✅ CRUD, filter, cari | ✅ |
 | Guest | ✅ CRUD, cari | ✅ |
-| Meeting | ✅ | daftar saja |
+| Weekly Meeting | ✅ CRUD | ✅ |
+| WA Blast + template `{link_hadir}` | ✅ | ✅ |
+| Export / Import CSV | ✅ | ✅ |
 | Dashboard chapter | ✅ | ✅ |
 | Dashboard nasional | ✅ | ✅ |
 | Kelola akun / PIC | ✅ | ✅ |
+| Log aktivitas | ✅ | ✅ |
+| Multi-tenant per host | ✅ | ✅ |
+| Konfirmasi kehadiran publik `/wm/{token}` | ✅ | ✅ |
+| PWA (manifest, service worker, offline) | — | ✅ |
+
+### Catatan desain per modul
+
+**MCQA** hanya menampilkan visitor yang sudah hadir, dan database menolak hasil
+airtime untuk status lain lewat `CHECK` constraint. Mencatatnya untuk yang
+belum hadir akan diam-diam merusak laporan konversi.
+
+**WA Blast** menyiapkan pesan dan tautan `wa.me`, lalu **manusia** yang menekan
+kirim. Tidak ada pengiriman otomatis: gateway WhatsApp tidak resmi adalah cara
+tercepat nomor chapter diblokir. Nomor yang tidak valid dilaporkan per nama,
+bukan didiamkan — penerima yang hilang diam-diam baru ketahuan seminggu kemudian.
+
+**Placeholder yang tidak dikenal sengaja dibiarkan terlihat** di hasil render.
+`{salah_ketik}` yang muncul di pratinjau memberi tahu penulisnya; string kosong
+menyembunyikannya sampai pesan sudah telanjur terkirim.
+
+**Import** melaporkan setiap baris gagal beserta alasannya. "37 dari 40 masuk"
+tanpa menyebut tiga yang mana tidak berguna bagi orang yang harus memperbaikinya.
+
+**Export** menulis BOM UTF-8. Tanpa itu Excel membaca file sebagai codepage
+sistem dan merusak setiap nama beraksen.
+
+**Konfirmasi publik** tidak pernah memundurkan status. Membuka ulang tautan WA
+lama tidak bisa membatalkan catatan kehadiran, dan responsnya hanya memuat nama
+serta meeting — bukan telepon, email, atau catatan.
 
 ## Yang sudah terverifikasi
 
@@ -151,6 +183,36 @@ skala aplikasi ini tidak butuh.
 
 ### Uji otomatis
 
+Setiap lapisan kini punya tes:
+
+| Lapisan | Cakupan |
+|---|---|
+| `domain` | scope, peran, status, template, host, tarif konversi |
+| `usecase` | eskalasi peran, paginasi, normalisasi nomor, parsing CSV |
+| `platform/password` | salting, hash cacat, kebijakan panjang per rune |
+| `platform/session` | payload diutak-atik, tag rusak, kunci asing, kedaluwarsa |
+| `delivery/http/handler` | pemetaan error → status, penolakan field asing |
+| `delivery/http/middleware` | security header, penjaga Origin CSRF |
+| `repository/postgres` | **integrasi** terhadap Postgres sungguhan |
+| `frontend` | klien API, halaman login (Vitest + Testing Library) |
+
+Tes repository berjalan terhadap database asli — yang layak diuji di sana adalah
+SQL-nya sendiri (penyaringan scope, indeks unik, join). Driver tiruan hanya akan
+membuktikan bahwa string yang saya tulis adalah string yang saya tulis.
+
+```bash
+# Unit saja (tanpa Docker)
+cd backend && go test ./...
+
+# Termasuk integrasi
+TEST_DATABASE_URL='postgres://bni:bni_dev_password@localhost:5440/bni_visitor?sslmode=disable' \
+  go test ./...
+
+cd frontend && npm test
+```
+
+
+
 `go test ./...` mencakup properti yang paling mahal kalau salah:
 
 - `ResolveScope` — setiap kombinasi peran × chapter yang diminta, termasuk
@@ -166,12 +228,12 @@ skala aplikasi ini tidak butuh.
 
 ## Peta jalan
 
-Belum diport dari aplikasi Next.js:
+Fitur sudah setara dengan aplikasi Next.js. Yang belum:
 
-- [ ] MCQA (hasil airtime) dan Weekly Meeting sebagai layar tersendiri
-- [ ] WA Blast dan template pesan `{link_hadir}`
-- [ ] Export / Import Excel
-- [ ] Multi-tenant per subdomain (branding chapter dari host)
-- [ ] PWA, quick tour bernarasi, asisten AI
-- [ ] Halaman konfirmasi kehadiran publik (`/wm/{token}`)
-- [ ] Uji integrasi terhadap Postgres sungguhan (yang ada sekarang murni unit)
+- [ ] **Asisten AI** — butuh kunci penyedia; sengaja tidak dibuat agar tidak ada
+      kunci yang ikut ter-commit lagi
+- [ ] **Quick tour bernarasi** — v1 memakai ElevenLabs; jalur yang sama akan
+      mengulang masalah kunci publik, jadi ditunda sampai kuncinya dikelola
+      lewat secret manager
+- [ ] **Import Excel (.xlsx)** — yang ada baru CSV, yang menutup sebagian besar
+      kebutuhan tanpa menambah dependensi parser

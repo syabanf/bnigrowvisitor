@@ -56,6 +56,9 @@ func run(logger *slog.Logger) error {
 	members := postgres.NewMemberRepository(pool)
 	guests := postgres.NewGuestRepository(pool)
 	stats := postgres.NewStatsRepository(pool)
+	domains := postgres.NewDomainRepository(pool)
+	templates := postgres.NewWATemplateRepository(pool)
+	activity := postgres.NewActivityLogRepository(pool)
 	audit := postgres.NewLoginAuditRepository(pool)
 
 	sessions := session.New(cfg.SessionSecret, cfg.SessionMaxAge)
@@ -67,6 +70,9 @@ func run(logger *slog.Logger) error {
 	guestUC := usecase.NewGuestUsecase(guests, chapters)
 	dashboardUC := usecase.NewDashboardUsecase(stats)
 	accountUC := usecase.NewAccountUsecase(users, chapters)
+	tenantUC := usecase.NewTenantUsecase(domains, chapters)
+	messagingUC := usecase.NewMessagingUsecase(templates, visitors, chapters, cfg.PublicBaseURL)
+	transferUC := usecase.NewTransferUsecase(visitors, members, chapters)
 
 	secureCookies := cfg.Environment == "production"
 	router := nethttp.NewRouter(nethttp.Handlers{
@@ -77,6 +83,13 @@ func run(logger *slog.Logger) error {
 		Guest:     handler.NewGuestHandler(guestUC),
 		Dashboard: handler.NewDashboardHandler(dashboardUC),
 		Account:   handler.NewAccountHandler(accountUC),
+		Meeting:   handler.NewMeetingHandler(meetings, chapters),
+		MCQA:      handler.NewMCQAHandler(visitorUC),
+		Messaging: handler.NewMessagingHandler(messagingUC),
+		Transfer:  handler.NewTransferHandler(transferUC),
+		Tenant:    handler.NewTenantHandler(tenantUC),
+		Activity:  handler.NewActivityHandler(activity),
+		Public:    handler.NewPublicHandler(visitorUC),
 	}, sessions, users, cfg.AllowedOrigins)
 
 	srv := &http.Server{

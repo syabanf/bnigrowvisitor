@@ -116,11 +116,44 @@ type Visitor struct {
 	MeetingID     *string       `json:"meeting_id,omitempty"`
 	PICID         *string       `json:"pic_id,omitempty"`
 	Status        VisitorStatus `json:"status"`
-	Notes         string        `json:"notes,omitempty"`
+
+	// MCQA: the airtime outcome, only meaningful once the visitor attended.
+	AttendedChoiceNumber *int   `json:"attended_choice_number,omitempty"`
+	AttendedChoiceNote   string `json:"attended_choice_note,omitempty"`
+
+	Notes string `json:"notes,omitempty"`
 	CreatedBy     *string       `json:"created_by,omitempty"`
 	CreatedAt     time.Time     `json:"created_at"`
 	UpdatedAt     time.Time     `json:"updated_at"`
 
-	PICName     string `json:"pic_name,omitempty"`
-	MeetingName string `json:"meeting_name,omitempty"`
+	PICName     string     `json:"pic_name,omitempty"`
+	MeetingName string     `json:"meeting_name,omitempty"`
+	MeetingDate *time.Time `json:"meeting_date,omitempty"`
+	ChapterName string     `json:"chapter_name,omitempty"`
+}
+
+// AirtimeChoice labels the MCQA outcomes. Kept beside the entity so the API and
+// any future report agree on the wording without duplicating a map.
+var AirtimeChoice = map[int]string{
+	1: "Bersedia bergabung",
+	2: "Ingin datang lagi",
+	3: "Belum tertarik",
+}
+
+// CanRecordAirtime reports whether a status is far enough along the funnel for
+// an airtime result to make sense. Recording one against a visitor who has not
+// attended would silently corrupt the MCQA report.
+func (s VisitorStatus) CanRecordAirtime() bool {
+	switch s {
+	case StatusAttended, StatusInterview, StatusMember, StatusNotContinue:
+		return true
+	}
+	return false
+}
+
+// ConfirmableStatuses are the states a visitor can still confirm from. Anything
+// further along is already settled and must not be walked backwards by someone
+// re-opening an old WhatsApp link.
+func (s VisitorStatus) CanConfirmAttendance() bool {
+	return s == StatusNew || s == StatusFollowUp
 }

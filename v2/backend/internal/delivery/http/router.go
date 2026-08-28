@@ -23,6 +23,13 @@ type Handlers struct {
 	Guest     *handler.GuestHandler
 	Dashboard *handler.DashboardHandler
 	Account   *handler.AccountHandler
+	Meeting   *handler.MeetingHandler
+	MCQA      *handler.MCQAHandler
+	Messaging *handler.MessagingHandler
+	Transfer  *handler.TransferHandler
+	Tenant    *handler.TenantHandler
+	Activity  *handler.ActivityHandler
+	Public    *handler.PublicHandler
 }
 
 func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionValidator, allowedOrigins []string) http.Handler {
@@ -61,13 +68,18 @@ func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionVa
 		})
 		api.Post("/auth/logout", h.Auth.Logout)
 
+		// Public by design: the login screen needs chapter branding before a
+		// session exists, and a visitor confirming attendance from a WhatsApp
+		// link has no account at all.
+		api.Get("/tenant-context", h.Tenant.Context)
+		api.Post("/public/confirm/{token}", h.Public.Confirm)
+
 		// Everything below this line requires a valid session.
 		api.Group(func(private chi.Router) {
 			private.Use(middleware.RequireSession(sessions, validator))
 
 			private.Get("/auth/me", h.Auth.Me)
 			private.Get("/chapters", h.Chapter.List)
-			private.Get("/meetings", h.Chapter.ListMeetings)
 
 			private.Route("/visitors", func(v chi.Router) {
 				v.Get("/", h.Visitor.List)
@@ -95,6 +107,31 @@ func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionVa
 
 			private.Get("/dashboard/chapter", h.Dashboard.Chapter)
 			private.Get("/dashboard/national", h.Dashboard.National)
+
+			private.Route("/meetings", func(m chi.Router) {
+				m.Get("/", h.Meeting.List)
+				m.Post("/", h.Meeting.Create)
+				m.Patch("/{id}", h.Meeting.Update)
+				m.Delete("/{id}", h.Meeting.Delete)
+			})
+
+			private.Route("/mcqa", func(m chi.Router) {
+				m.Get("/", h.MCQA.List)
+				m.Get("/choices", h.MCQA.Choices)
+				m.Patch("/{id}", h.MCQA.Record)
+			})
+
+			private.Route("/wa", func(t chi.Router) {
+				t.Get("/templates", h.Messaging.ListTemplates)
+				t.Post("/templates", h.Messaging.SaveTemplate)
+				t.Patch("/templates/{id}", h.Messaging.SaveTemplate)
+				t.Delete("/templates/{id}", h.Messaging.DeleteTemplate)
+				t.Get("/blast", h.Messaging.Blast)
+			})
+
+			private.Get("/export/visitors", h.Transfer.ExportVisitors)
+			private.Post("/import/visitors", h.Transfer.ImportVisitors)
+			private.Get("/activity", h.Activity.List)
 
 			private.Get("/pics", h.Account.ListPICs)
 			private.Post("/account/change-password", h.Account.ChangeOwnPassword)

@@ -19,6 +19,10 @@ type Config struct {
 	SessionMaxAge  time.Duration
 	AllowedOrigins []string
 	Environment    string
+	// PublicBaseURL is what {link_hadir} points at in a WhatsApp message. It
+	// must be the address a visitor's phone can reach, which is not the same as
+	// the address the API is bound to.
+	PublicBaseURL string
 }
 
 func Load() (*Config, error) {
@@ -27,9 +31,8 @@ func Load() (*Config, error) {
 		DatabaseURL:   os.Getenv("DATABASE_URL"),
 		SessionSecret: os.Getenv("SESSION_SECRET"),
 		Environment:   env("APP_ENV", "development"),
-		AllowedOrigins: []string{
-			env("CORS_ORIGIN", "http://localhost:5173"),
-		},
+		PublicBaseURL: env("PUBLIC_BASE_URL", "http://localhost:8095"),
+		AllowedOrigins: splitOrigins(env("CORS_ORIGIN", "http://localhost:8095,http://localhost:5173")),
 	}
 
 	days, err := strconv.Atoi(env("SESSION_MAX_AGE_DAYS", "7"))
@@ -85,4 +88,20 @@ func env(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// splitOrigins parses the comma-separated allowlist. Origins are compared
+// verbatim against the browser's Origin header, so they are lowercased and
+// stripped of a trailing slash — a mismatch there silently blocks the real app
+// rather than any attacker.
+func splitOrigins(raw string) []string {
+	parts := strings.Split(raw, ",")
+	origins := make([]string, 0, len(parts))
+	for _, p := range parts {
+		o := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(p)), "/")
+		if o != "" {
+			origins = append(origins, o)
+		}
+	}
+	return origins
 }

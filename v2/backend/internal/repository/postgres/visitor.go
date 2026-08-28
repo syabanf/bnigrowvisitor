@@ -21,13 +21,15 @@ const visitorColumns = `
 	v.id, v.chapter_id, v.name, v.phone, COALESCE(v.email, ''),
 	COALESCE(v.business_field, ''), COALESCE(v.company, ''), COALESCE(v.gender, ''),
 	COALESCE(v.referral_name, ''), v.meeting_id, v.pic_id, v.status,
+	v.attended_choice_number, COALESCE(v.attended_choice_note, ''),
 	COALESCE(v.notes, ''), v.created_by, v.created_at, v.updated_at,
-	COALESCE(p.name, ''), COALESCE(m.title, '')`
+	COALESCE(p.name, ''), COALESCE(m.title, ''), m.meeting_date, COALESCE(c.display_name, '')`
 
 const visitorJoins = `
 	FROM visitors v
 	LEFT JOIN users p    ON p.id = v.pic_id
-	LEFT JOIN meetings m ON m.id = v.meeting_id`
+	LEFT JOIN meetings m ON m.id = v.meeting_id
+	LEFT JOIN chapters c ON c.id = v.chapter_id`
 
 // conditions builds the WHERE clause. Every value goes in through a placeholder
 // — only the operators and column names are ever concatenated, so no caller
@@ -129,11 +131,13 @@ func (r *VisitorRepository) Update(ctx context.Context, v *domain.Visitor) error
 			name = $2, phone = $3, email = NULLIF($4,''), business_field = NULLIF($5,''),
 			company = NULLIF($6,''), gender = NULLIF($7,''), referral_name = NULLIF($8,''),
 			meeting_id = $9, pic_id = $10, status = $11, notes = NULLIF($12,''),
+			attended_choice_number = $13, attended_choice_note = NULLIF($14,''),
 			updated_at = now()
 		WHERE id = $1
 		RETURNING updated_at`,
 		v.ID, v.Name, v.Phone, v.Email, v.BusinessField, v.Company,
 		v.Gender, v.ReferralName, v.MeetingID, v.PICID, v.Status, v.Notes,
+		v.AttendedChoiceNumber, v.AttendedChoiceNote,
 	).Scan(&v.UpdatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -168,7 +172,8 @@ func scanVisitor(row pgx.Row) (*domain.Visitor, error) {
 	err := row.Scan(
 		&v.ID, &v.ChapterID, &v.Name, &v.Phone, &v.Email, &v.BusinessField,
 		&v.Company, &v.Gender, &v.ReferralName, &v.MeetingID, &v.PICID, &v.Status,
-		&v.Notes, &v.CreatedBy, &v.CreatedAt, &v.UpdatedAt, &v.PICName, &v.MeetingName,
+		&v.AttendedChoiceNumber, &v.AttendedChoiceNote,
+		&v.Notes, &v.CreatedBy, &v.CreatedAt, &v.UpdatedAt, &v.PICName, &v.MeetingName, &v.MeetingDate, &v.ChapterName,
 	)
 	if err != nil {
 		return nil, err

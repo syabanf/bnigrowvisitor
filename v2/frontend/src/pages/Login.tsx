@@ -1,5 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { api } from '../api/client'
 import { useAuth } from '../auth'
+
+interface TenantContext {
+  matched: boolean
+  display_name?: string
+  chapter?: { name: string; area_name?: string; city_name?: string }
+}
 
 const DEMO_ACCOUNTS = [
   { email: 'national@demo.test', label: 'National Admin', scope: 'Semua chapter' },
@@ -14,6 +21,14 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
+  const [tenant, setTenant] = useState<TenantContext | null>(null)
+
+  // Branding comes from the host, so the login screen shows the right chapter
+  // before anyone has signed in. An unmatched host is the national entry point,
+  // not an error.
+  useEffect(() => {
+    api.get<TenantContext>('/tenant-context').then(setTenant).catch(() => {})
+  }, [])
 
   const submit = async (mail: string, pass: string) => {
     setError('')
@@ -35,8 +50,12 @@ export default function Login() {
   return (
     <div className="login">
       <div className="login__card">
-        <h1>BNI Visitor</h1>
-        <p className="muted">Masuk untuk melanjutkan</p>
+        <h1>{tenant?.matched ? tenant.display_name : 'BNI Visitor'}</h1>
+        <p className="muted">
+          {tenant?.matched && tenant.chapter?.city_name
+            ? `${tenant.chapter.city_name} · masuk untuk melanjutkan`
+            : 'Masuk untuk melanjutkan'}
+        </p>
 
         {error && <div className="alert">{error}</div>}
 
