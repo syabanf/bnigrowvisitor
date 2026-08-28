@@ -1,0 +1,7 @@
+# Build output
+backend/bin/
+frontend/dist/
+frontend/node_modules/
+
+# Local secrets — compose falls back to safe defaults without this file.
+.env

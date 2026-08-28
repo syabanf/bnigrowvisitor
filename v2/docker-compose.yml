@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: bni-v2-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bni}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bni_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-bni_visitor}
+    ports:
+      - "${DB_PORT:-5440}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Files here run once, in name order, on an empty data directory — schema
+      # first, then seed.
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bni} -d ${POSTGRES_DB:-bni_visitor}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bni-v2-api
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      PORT: "8080"
+      DATABASE_URL: postgres://${POSTGRES_USER:-bni}:${POSTGRES_PASSWORD:-bni_dev_password}@db:5432/${POSTGRES_DB:-bni_visitor}?sslmode=disable
+      SESSION_SECRET: ${SESSION_SECRET:-dev-only-secret-change-me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    depends_on:
+      # Waits for the healthcheck, not just for the container to exist —
+      # otherwise the API races the schema and exits on a failed ping.
+      db:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8090}:8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bni-v2-web
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8095}:80"
+    restart: unless-stopped
+
+volumes:
+  db_data:
