@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"bni-visitor/internal/domain"
@@ -52,8 +53,11 @@ func (uc *AccountUsecase) Create(ctx context.Context, scope domain.Scope, actorR
 
 	name := strings.TrimSpace(in.Name)
 	email := strings.ToLower(strings.TrimSpace(in.Email))
-	if name == "" || email == "" || len(in.Password) < 6 {
+	if name == "" || email == "" {
 		return nil, domain.ErrValidation
+	}
+	if err := password.Validate(in.Password); err != nil {
+		return nil, fmt.Errorf("%w: %s", domain.ErrValidation, err)
 	}
 
 	chapterID, err := resolveChapter(ctx, uc.chapters, scope, in.ChapterID)
@@ -82,8 +86,8 @@ func (uc *AccountUsecase) SetPassword(ctx context.Context, scope domain.Scope, a
 	if !canManageAccounts(actorRole) {
 		return domain.ErrForbidden
 	}
-	if len(newPassword) < 6 {
-		return domain.ErrValidation
+	if err := password.Validate(newPassword); err != nil {
+		return fmt.Errorf("%w: %s", domain.ErrValidation, err)
 	}
 
 	target, err := uc.users.FindByID(ctx, userID)
@@ -127,8 +131,8 @@ func (uc *AccountUsecase) SetActive(ctx context.Context, scope domain.Scope, act
 // ChangeOwnPassword is the self-service path: it needs the current password, so
 // a stolen session alone cannot lock the real owner out.
 func (uc *AccountUsecase) ChangeOwnPassword(ctx context.Context, userID, current, next string) error {
-	if len(next) < 6 {
-		return domain.ErrValidation
+	if err := password.Validate(next); err != nil {
+		return fmt.Errorf("%w: %s", domain.ErrValidation, err)
 	}
 	user, err := uc.users.FindByID(ctx, userID)
 	if err != nil {

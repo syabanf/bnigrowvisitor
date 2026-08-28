@@ -5,8 +5,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -39,13 +41,43 @@ func Load() (*Config, error) {
 	if cfg.DatabaseURL == "" {
 		return nil, errors.New("DATABASE_URL wajib diset")
 	}
-	// Refusing to start beats silently signing sessions with a default secret:
-	// a predictable key means anyone can mint a valid admin cookie.
-	if cfg.SessionSecret == "" {
-		return nil, errors.New("SESSION_SECRET wajib diset")
+	if err := validateSecret(cfg.SessionSecret, cfg.Environment); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
+}
+
+// Secrets shipped in examples and compose files get deployed verbatim more
+// often than anyone admits, and a predictable signing key means anyone can mint
+// a valid admin cookie. Refusing to start is the only reliable guard.
+var wellKnownSecrets = map[string]struct{}{
+	"dev-only-secret-change-me": {},
+	"changeme":                  {},
+	"secret":                    {},
+	"development":               {},
+	"bni-visitor-demo-session-secret": {},
+}
+
+const minSecretLength = 32
+
+func validateSecret(secret, environment string) error {
+	if secret == "" {
+		return errors.New("SESSION_SECRET wajib diset")
+	}
+	if _, known := wellKnownSecrets[strings.ToLower(strings.TrimSpace(secret))]; known {
+		return errors.New("SESSION_SECRET masih memakai nilai contoh — ganti dengan nilai acak: openssl rand -base64 32")
+	}
+	// Outside production a short key is tolerated with a warning so a local run
+	// is not blocked, but the placeholder check above still applies.
+	if len(secret) < minSecretLength {
+		if environment == "production" {
+			return fmt.Errorf("SESSION_SECRET terlalu pendek (%d karakter, minimal %d)", len(secret), minSecretLength)
+		}
+		slog.Warn("SESSION_SECRET pendek — cukup untuk lokal, tidak untuk produksi",
+			"panjang", len(secret), "minimal", minSecretLength)
+	}
+	return nil
 }
 
 func env(key, fallback string) string {

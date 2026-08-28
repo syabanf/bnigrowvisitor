@@ -77,7 +77,7 @@ func run(logger *slog.Logger) error {
 		Guest:     handler.NewGuestHandler(guestUC),
 		Dashboard: handler.NewDashboardHandler(dashboardUC),
 		Account:   handler.NewAccountHandler(accountUC),
-	}, sessions, cfg.AllowedOrigins)
+	}, sessions, users, cfg.AllowedOrigins)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

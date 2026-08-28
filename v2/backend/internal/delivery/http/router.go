@@ -7,9 +7,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 
 	"bni-visitor/internal/delivery/http/handler"
 	"bni-visitor/internal/delivery/http/middleware"
+	"bni-visitor/internal/domain"
 	"bni-visitor/internal/platform/session"
 )
 
@@ -23,13 +25,14 @@ type Handlers struct {
 	Account   *handler.AccountHandler
 }
 
-func NewRouter(h Handlers, sessions *session.Manager, allowedOrigins []string) http.Handler {
+func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionValidator, allowedOrigins []string) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
+	r.Use(middleware.SecurityHeaders)
 
 	// Credentials are required because auth rides on a cookie, and a wildcard
 	// origin is invalid in that mode — the allowlist has to be explicit.
@@ -46,12 +49,21 @@ func NewRouter(h Handlers, sessions *session.Manager, allowedOrigins []string) h
 	})
 
 	r.Route("/api", func(api chi.Router) {
-		api.Post("/auth/login", h.Auth.Login)
+		api.Use(middleware.RequireSameOrigin(allowedOrigins))
+
+		// Login is the one unauthenticated write, so it is the one endpoint an
+		// attacker can hammer. Throttling by IP turns an offline-speed password
+		// guess into a months-long exercise; bcrypt alone only slows each
+		// attempt, it does not bound how many they get.
+		api.Group(func(auth chi.Router) {
+			auth.Use(httprate.LimitByIP(10, time.Minute))
+			auth.Post("/auth/login", h.Auth.Login)
+		})
 		api.Post("/auth/logout", h.Auth.Logout)
 
 		// Everything below this line requires a valid session.
 		api.Group(func(private chi.Router) {
-			private.Use(middleware.RequireSession(sessions))
+			private.Use(middleware.RequireSession(sessions, validator))
 
 			private.Get("/auth/me", h.Auth.Me)
 			private.Get("/chapters", h.Chapter.List)

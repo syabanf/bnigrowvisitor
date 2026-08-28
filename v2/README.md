@@ -130,6 +130,25 @@ Diuji terhadap stack yang benar-benar berjalan, bukan mock:
 **Statis**
 - `go build ./...`, `go vet ./...`, `go test ./...`, `tsc --noEmit`, `vite build`
 
+### Keamanan
+
+Yang aktif, dan bagaimana masing-masing diuji:
+
+| Kontrol | Bukti |
+|---|---|
+| Sesi dicek ulang ke database tiap request | Akun dinonaktifkan → sesi yang sedang berjalan langsung 401, bukan menunggu cookie kedaluwarsa |
+| Peran & chapter dibaca ulang dari database, bukan dari token | Demosi atau pindah chapter langsung berlaku |
+| Rate limit login 10/menit per IP | Percobaan ke-8 dan seterusnya → 429 |
+| Penolakan Origin asing pada semua method yang mengubah data | `Origin: https://penyerang.example` → 403; origin sah → 200 |
+| Secret sesi menolak nilai contoh & terlalu pendek | Compose gagal start tanpa `SESSION_SECRET`; nilai placeholder ditolak API |
+| Security header di API dan nginx | CSP, X-Frame-Options, nosniff, Referrer-Policy, `Cache-Control: no-store` |
+| Kebijakan password (min 10 rune, tolak yang umum) | Dihitung per rune, bukan byte |
+| Isolasi chapter & penjaga eskalasi peran | Lihat daftar di atas |
+
+Verifikasi sesi ke database itu satu pembacaan primary key ber-index per request.
+Menambahkan cache akan menukar kebenaran (izin basi) dengan penghematan yang
+skala aplikasi ini tidak butuh.
+
 ### Uji otomatis
 
 `go test ./...` mencakup properti yang paling mahal kalau salah:
@@ -140,6 +159,8 @@ Diuji terhadap stack yang benar-benar berjalan, bukan mock:
 - `validateGrant` — setiap anak tangga eskalasi peran
 - Sesi HMAC — payload yang diutak-atik, tag rusak, kunci asing, token
   kedaluwarsa, dan token cacat bentuk
+- Hashing password — salt berbeda tiap hash, hash cacat tidak pernah lolos,
+  dan kebijakan panjang yang menghitung rune (bukan byte)
 - Pembagian nol pada perhitungan konversi/kehadiran, dan member tanpa tanggal
   renewal yang tidak boleh dianggap jatuh tempo
 

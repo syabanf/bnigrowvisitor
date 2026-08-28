@@ -20,10 +20,3 @@ npm-debug.log*
 README.md
 docs
 supabase
-*.sql
-*.patch
-add-export-button.sh
-check-users.js
-import-*.js
-import_*.js
-update-*.js

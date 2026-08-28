@@ -141,3 +141,9 @@ func (r *UserRepository) SetActive(ctx context.Context, id string, active bool) 
 	}
 	return nil
 }
+
+// ActiveUser satisfies domain.SessionValidator. FindByID already filters on
+// is_active, so a deactivated account resolves to ErrNotFound.
+func (r *UserRepository) ActiveUser(ctx context.Context, id string) (*domain.User, error) {
+	return r.FindByID(ctx, id)
+}
