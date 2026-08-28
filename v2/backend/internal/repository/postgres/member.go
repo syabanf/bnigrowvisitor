@@ -56,7 +56,7 @@ func (r *MemberRepository) List(ctx context.Context, scope domain.Scope, f domai
 	query := fmt.Sprintf(`SELECT %s %s %s ORDER BY m.name LIMIT $%d OFFSET $%d`,
 		memberColumns, memberJoins, clause, len(args)-1, len(args))
 
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, append(searchPlanMode(f.Search), args...)...)
 	if err != nil {
 		return nil, err
 	}

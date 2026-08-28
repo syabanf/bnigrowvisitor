@@ -57,7 +57,7 @@ func (r *GuestRepository) List(ctx context.Context, scope domain.Scope, f domain
 	query := fmt.Sprintf(`SELECT %s %s %s ORDER BY g.created_at DESC LIMIT $%d OFFSET $%d`,
 		guestColumns, guestJoins, clause, len(args)-1, len(args))
 
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, append(searchPlanMode(f.Search), args...)...)
 	if err != nil {
 		return nil, err
 	}

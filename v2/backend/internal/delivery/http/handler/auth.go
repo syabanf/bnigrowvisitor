@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -88,18 +89,29 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, map[string]any{"user": user})
 }
 
-// clientIP prefers the proxy header but takes only the first hop; the rest of
-// an X-Forwarded-For chain is attacker-controlled.
+// clientIP resolves the address recorded in the login audit.
+//
+// X-Forwarded-For is deliberately not consulted. This previously read its
+// leftmost entry, on the stated reasoning that the first hop is trustworthy and
+// "the rest of the chain is attacker-controlled" — which is backwards. Each
+// proxy appends the address it saw, so the rightmost entries are the ones our
+// own infrastructure wrote and the leftmost is whatever the client typed. The
+// audit was therefore recording an attacker-chosen value, in the one table that
+// exists to investigate an attack.
+//
+// X-Real-IP is safe by contrast because nginx sets it from $remote_addr, which
+// overwrites anything the client sent. Falling back to RemoteAddr covers a
+// direct connection.
+//
+// A deployment that puts another proxy in front of nginx must have it set
+// X-Real-IP too; without that, this records the near proxy rather than the
+// client — wrong, but not forgeable, which is the property that matters here.
 func clientIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		if first, _, found := strings.Cut(fwd, ","); found {
-			return strings.TrimSpace(first)
-		}
-		return strings.TrimSpace(fwd)
+	if real := strings.TrimSpace(r.Header.Get("X-Real-IP")); real != "" {
+		return real
 	}
-	host, _, found := strings.Cut(r.RemoteAddr, ":")
-	if !found {
-		return r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
 	}
-	return host
+	return r.RemoteAddr
 }

@@ -69,15 +69,40 @@ func conditions(scope domain.Scope, f domain.VisitorFilter) (string, []any) {
 	return " WHERE " + strings.Join(where, " AND "), args
 }
 
+// searchPlanMode decides how a list query is sent to Postgres.
+//
+// pgx caches prepared statements, and Postgres switches a prepared statement to
+// a generic plan after five executions. A generic plan is built without the
+// parameter values, so for `col ILIKE $1` it cannot know the pattern and
+// guesses the selectivity. Paired with ORDER BY created_at DESC LIMIT 50 it
+// then picks the ordering index and filters as it walks — measured on 40k
+// visitors it discarded 40,030 rows to find 1, taking 28ms where the custom
+// plan used the trigram indexes and took 1.7ms.
+//
+// This is why adding the missing trigram index fixed the query in isolation but
+// changed nothing at the endpoint: from the sixth request onward the index was
+// never consulted.
+//
+// QueryExecModeExec sends the statement unnamed, so Postgres plans it fresh
+// against the actual pattern every time. Applied only when a search term is
+// present: re-planning is not free, and every other filter is an equality on a
+// column whose statistics the generic plan already handles well.
+func searchPlanMode(search string) []any {
+	if strings.TrimSpace(search) == "" {
+		return nil
+	}
+	return []any{pgx.QueryExecModeExec}
+}
+
 func (r *VisitorRepository) List(ctx context.Context, scope domain.Scope, f domain.VisitorFilter) ([]domain.Visitor, error) {
 	clause, args := conditions(scope, f)
 	args = append(args, f.Limit, f.Offset)
 
 	query := fmt.Sprintf(
-		`SELECT %s %s %s ORDER BY v.created_at DESC LIMIT $%d OFFSET $%d`,
+		`SELECT %s %s %s ORDER BY v.created_at DESC, v.id DESC LIMIT $%d OFFSET $%d`,
 		visitorColumns, visitorJoins, clause, len(args)-1, len(args))
 
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, append(searchPlanMode(f.Search), args...)...)
 	if err != nil {
 		return nil, err
 	}

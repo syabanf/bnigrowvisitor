@@ -354,6 +354,54 @@ saat sertifikat lama kedaluwarsa. HSTS hanya aktif di konfigurasi TLS — browse
 yang pernah melihatnya menolak HTTP polos selama setahun, jadi mengirimkannya
 dengan sertifikat yang belum benar akan mengunci pengguna di luar.
 
+## Uji hardening & stress
+
+```bash
+./scripts/hardening-test.sh          # 63 pemeriksaan keamanan
+./scripts/stress-test.sh 40000 40 10 # 40k baris, 40 pembaca konkuren, 10 detik
+```
+
+Keduanya menegaskan hasil, bukan mencetak respons, supaya regresi menggagalkan
+run alih-alih lewat begitu saja di layar. Stress test menandai barisnya sendiri
+dan menghapusnya di akhir.
+
+Empat masalah nyata ditemukan hardening test pada run pertama: nginx membuang
+seluruh security header di location yang punya `add_header` sendiri (`add_header`
+tidak diwariskan — satu saja di level location membatalkan semua dari level
+server, dan yang terkena persis halaman SPA dan seluruh aset); write tanpa
+`Origin` maupun `Referer` diloloskan; uuid tidak valid dan nilai enum tidak
+dikenal keduanya menghasilkan 500; serta dotfile di web root dijawab 200 oleh
+fallback SPA.
+
+Angka konkuren pada stress test **bukan** throughput server. Generatornya
+mem-fork satu curl per request dari bash dan mentok di sekitar 180 rps apa pun
+endpoint-nya. Yang bisa dipercaya adalah perbandingan relatifnya — endpoint yang
+menonjol dari yang lain itu regresi nyata — dan pengukuran di level SQL.
+
+### Rencana kueri: kenapa indeks saja tidak cukup
+
+Pencarian visitor sempat berjalan 25 ms sementara list biasa 3 ms, padahal
+`EXPLAIN` atas kueri yang sama menunjukkan 1,7 ms.
+
+Penyebabnya: pgx meng-cache prepared statement, dan Postgres beralih ke
+**generic plan** setelah lima eksekusi. Generic plan disusun tanpa nilai
+parameter, jadi untuk `col ILIKE $1` selektivitasnya hanya ditebak; digabung
+dengan `ORDER BY created_at DESC LIMIT 50`, planner memilih indeks pengurutan
+lalu menyaring sambil berjalan — **membuang 40.030 baris untuk menemukan 1**.
+
+Inilah sebabnya menambah indeks trigram yang hilang memperbaiki kueri secara
+terisolasi tapi tidak mengubah apa pun di endpoint: mulai request keenam,
+indeksnya tidak pernah disentuh.
+
+| | rencana | waktu |
+|---|---|---|
+| Custom plan | BitmapOr atas empat indeks trigram | **1,7 ms** |
+| Generic plan | Index Scan + filter, 40.030 baris dibuang | **28,1 ms** |
+
+`QueryExecModeExec` dipakai hanya saat ada kata kunci pencarian, sehingga
+statement dikirim tanpa nama dan Postgres selalu merencanakan ulang terhadap
+pola yang sebenarnya. Setelah itu pencarian dan list sama cepat.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres
