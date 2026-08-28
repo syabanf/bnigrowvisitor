@@ -1,0 +1,4 @@
+# Private keys and certificates never belong in version control.
+*.pem
+*.key
+*.crt

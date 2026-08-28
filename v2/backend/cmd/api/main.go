@@ -17,6 +17,7 @@ import (
 	"bni-visitor/internal/delivery/http/handler"
 	"bni-visitor/internal/platform/config"
 	"bni-visitor/internal/platform/database"
+	"bni-visitor/internal/platform/maintenance"
 	"bni-visitor/internal/platform/session"
 	"bni-visitor/internal/repository/postgres"
 	"bni-visitor/internal/usecase"
@@ -104,7 +105,8 @@ func run(logger *slog.Logger) error {
 		Public:     handler.NewPublicHandler(visitorUC),
 		Governance: handler.NewGovernanceHandler(governanceUC),
 		Narration:  handler.NewNarrationHandler(narrationUC),
-	}, sessions, users, cfg.AllowedOrigins)
+		External:   handler.NewExternalHandler(members),
+	}, sessions, users, apiKeys, cfg.AllowedOrigins)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -114,6 +116,9 @@ func run(logger *slog.Logger) error {
 		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       2 * time.Minute,
 	}
+
+	// Housekeeping runs alongside the server and stops with it.
+	go maintenance.Run(ctx, pool, maintenance.DefaultRetention(), logger)
 
 	serverErr := make(chan error, 1)
 	go func() {

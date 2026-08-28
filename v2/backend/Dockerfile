@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.26-alpine AS builder
+# Pinned rather than floating on 1.26: the exact patch level is what fixes the
+# standard-library advisories govulncheck reports.
+FROM golang:1.26.6-alpine AS builder
 WORKDIR /src
 # Module files first so the dependency download layer survives source edits.
 COPY go.mod go.sum ./

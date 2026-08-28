@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,6 +21,7 @@ func NewUserRepository(db *pgxpool.Pool) *UserRepository { return &UserRepositor
 const userColumns = `
 	u.id, u.name, u.email, u.role, COALESCE(u.phone, ''), u.password_hash,
 	u.organization_id, u.chapter_id, u.is_active, u.created_at, u.updated_at,
+	u.failed_login_count, u.locked_until,
 	COALESCE(c.name, ''), COALESCE(a.name, ''), COALESCE(ci.name, '')`
 
 const userJoins = `
@@ -53,6 +55,7 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 	err := row.Scan(
 		&u.ID, &u.Name, &u.Email, &u.Role, &u.Phone, &u.PasswordHash,
 		&u.OrganizationID, &u.ChapterID, &u.IsActive, &u.CreatedAt, &u.UpdatedAt,
+		&u.FailedLoginCount, &u.LockedUntil,
 		&u.ChapterName, &u.AreaName, &u.CityName,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -146,4 +149,38 @@ func (r *UserRepository) SetActive(ctx context.Context, id string, active bool) 
 // is_active, so a deactivated account resolves to ErrNotFound.
 func (r *UserRepository) ActiveUser(ctx context.Context, id string) (*domain.User, error) {
 	return r.FindByID(ctx, id)
+}
+
+// RegisterFailedLogin increments the counter and, once it reaches the
+// threshold, sets an expiry. Done in one statement so two simultaneous guesses
+// cannot both read the same count and each write back the same increment.
+func (r *UserRepository) RegisterFailedLogin(ctx context.Context, id string, max int, lockFor time.Duration) (*time.Time, error) {
+	var lockedUntil *time.Time
+	err := r.db.QueryRow(ctx, `
+		UPDATE users
+		SET failed_login_count = failed_login_count + 1,
+		    locked_until = CASE
+		      WHEN failed_login_count + 1 >= $2 THEN now() + $3::interval
+		      ELSE locked_until
+		    END,
+		    updated_at = now()
+		WHERE id = $1
+		RETURNING locked_until`,
+		id, max, lockFor.String(),
+	).Scan(&lockedUntil)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrNotFound
+	}
+	return lockedUntil, err
+}
+
+// ClearFailedLogins resets the counter after a successful sign-in, so a user
+// who mistypes a few times and then gets it right is not creeping toward a
+// lockout for the rest of the day.
+func (r *UserRepository) ClearFailedLogins(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE users SET failed_login_count = 0, locked_until = NULL
+		WHERE id = $1 AND (failed_login_count > 0 OR locked_until IS NOT NULL)`, id)
+	return err
 }

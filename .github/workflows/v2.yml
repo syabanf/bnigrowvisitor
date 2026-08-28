@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26'
+          go-version: '1.26.6'
           cache-dependency-path: v2/backend/go.sum
 
       - name: Verify dependencies are tidy
@@ -69,6 +69,14 @@ jobs:
           TEST_DATABASE_URL: postgres://bni:bni_ci_password@localhost:5432/bni_visitor?sslmode=disable
         run: go test -race ./...
 
+      # Checks the dependency tree against the Go vulnerability database, and
+      # only reports issues on code paths actually reached — so a CVE in an
+      # unused function does not fail the build for nothing.
+      - name: Scan dependencies
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
   frontend:
     runs-on: ubuntu-latest
     defaults:
@@ -88,3 +96,9 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
+
+      # Production dependencies only: a vulnerability in a build-time tool does
+      # not ship to a browser, and failing on those trains people to ignore the
+      # whole check.
+      - name: Scan dependencies
+        run: npm audit --omit=dev --audit-level=high

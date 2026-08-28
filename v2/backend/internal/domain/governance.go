@@ -59,6 +59,11 @@ type APIKeyRepository interface {
 	Create(ctx context.Context, k *APIKey, hash string) error
 	SetActive(ctx context.Context, id string, active bool) error
 	Delete(ctx context.Context, id string) error
+
+	// FindByHash resolves a presented key. Lookup is by hash because the
+	// plaintext is never stored — there is nothing else to match on.
+	FindByHash(ctx context.Context, hash string) (*APIKey, error)
+	TouchLastUsed(ctx context.Context, id string) error
 }
 
 // LoginAttemptRecord is a row from the login audit, for the governance screen.

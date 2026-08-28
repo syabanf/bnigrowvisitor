@@ -24,3 +24,6 @@ jobs:
       # so a build that needs a live Supabase to compile is a regression.
       - run: npx tsc --noEmit
       - run: npm run build
+
+      - name: Scan dependencies
+        run: npm audit --omit=dev --audit-level=high

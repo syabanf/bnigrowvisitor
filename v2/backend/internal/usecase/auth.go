@@ -5,6 +5,7 @@ package usecase
 import (
 	"context"
 	"strings"
+	"time"
 
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/platform/password"
@@ -47,9 +48,35 @@ func (uc *AuthUsecase) Login(ctx context.Context, in LoginInput) (*domain.User, 
 		return nil, domain.ErrInvalidCredential
 	}
 
-	if !password.Verify(user.PasswordHash, in.Password) {
-		uc.record(ctx, &user.ID, email, false, "wrong_password", in)
+	// A locked account is refused before the password is even checked, and with
+	// the same error as a wrong password. Saying "locked" would confirm the
+	// account exists and tell an attacker their guessing is working.
+	if user.IsLocked(time.Now()) {
+		uc.record(ctx, &user.ID, email, false, "account_locked", in)
 		return nil, domain.ErrInvalidCredential
+	}
+
+	if !password.Verify(user.PasswordHash, in.Password) {
+		lockedUntil, err := uc.users.RegisterFailedLogin(
+			ctx, user.ID, domain.MaxFailedLogins, domain.LockoutDuration)
+		if err != nil {
+			uc.logger.Error("gagal mencatat kegagalan login", "user_id", user.ID, "err", err)
+		}
+
+		reason := "wrong_password"
+		if lockedUntil != nil && lockedUntil.After(time.Now()) {
+			reason = "locked_after_failures"
+		}
+		uc.record(ctx, &user.ID, email, false, reason, in)
+		return nil, domain.ErrInvalidCredential
+	}
+
+	// A correct password clears the counter, so occasional typos never
+	// accumulate into a lockout.
+	if user.FailedLoginCount > 0 || user.LockedUntil != nil {
+		if err := uc.users.ClearFailedLogins(ctx, user.ID); err != nil {
+			uc.logger.Error("gagal mereset penghitung login", "user_id", user.ID, "err", err)
+		}
 	}
 
 	// Opportunistic upgrade: a hash made at an older cost is re-hashed on a

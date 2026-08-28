@@ -1,6 +1,9 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // The interfaces below are declared here, beside the entities they return, and
 // implemented out in the infrastructure layer. That inversion is what keeps the
@@ -16,6 +19,11 @@ type UserRepository interface {
 	Create(ctx context.Context, u *User) error
 	Update(ctx context.Context, u *User) error
 	SetActive(ctx context.Context, id string, active bool) error
+
+	// RegisterFailedLogin increments the counter and locks the account once it
+	// crosses the threshold. Returns the resulting lock expiry, if any.
+	RegisterFailedLogin(ctx context.Context, id string, max int, lockFor time.Duration) (*time.Time, error)
+	ClearFailedLogins(ctx context.Context, id string) error
 }
 
 type ChapterRepository interface {

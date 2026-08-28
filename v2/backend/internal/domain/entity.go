@@ -92,6 +92,11 @@ type User struct {
 	ChapterName string `json:"chapter_name,omitempty"`
 	AreaName    string `json:"area_name,omitempty"`
 	CityName    string `json:"city_name,omitempty"`
+
+	// Lockout state. Never serialised: telling a caller how many attempts
+	// remain would help them pace an attack.
+	FailedLoginCount int        `json:"-"`
+	LockedUntil      *time.Time `json:"-"`
 }
 
 type Meeting struct {
@@ -156,4 +161,19 @@ func (s VisitorStatus) CanRecordAirtime() bool {
 // re-opening an old WhatsApp link.
 func (s VisitorStatus) CanConfirmAttendance() bool {
 	return s == StatusNew || s == StatusFollowUp
+}
+
+// Lockout policy.
+//
+// The IP rate limit already blunts a flood from one source, but an attacker
+// with many addresses walks straight past it. Counting failures per account is
+// what makes a distributed guess against one user expensive.
+const (
+	MaxFailedLogins = 8
+	LockoutDuration = 15 * time.Minute
+)
+
+// IsLocked reports whether the account is currently barred from signing in.
+func (u User) IsLocked(now time.Time) bool {
+	return u.LockedUntil != nil && u.LockedUntil.After(now)
 }

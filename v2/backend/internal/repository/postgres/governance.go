@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"bni-visitor/internal/domain"
@@ -151,4 +153,30 @@ func (r *GovernanceRepository) RecentLogins(ctx context.Context, limit int) ([]d
 		attempts = append(attempts, a)
 	}
 	return attempts, rows.Err()
+}
+
+func (r *APIKeyRepository) FindByHash(ctx context.Context, hash string) (*domain.APIKey, error) {
+	var k domain.APIKey
+	err := r.db.QueryRow(ctx, `
+		SELECT id, name, key_prefix, scope, is_active, last_used_at, expires_at, created_at
+		FROM api_keys
+		WHERE key_hash = $1
+		  AND is_active = true
+		  -- An expiry that has passed makes the key unusable without anyone
+		  -- having to remember to deactivate it.
+		  AND (expires_at IS NULL OR expires_at > now())`, hash).
+		Scan(&k.ID, &k.Name, &k.KeyPrefix, &k.Scope, &k.IsActive,
+			&k.LastUsedAt, &k.ExpiresAt, &k.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrNotFound
+	}
+	return &k, err
+}
+
+// TouchLastUsed records that a key was accepted. Best-effort: the caller
+// ignores the error, because failing a legitimate API request over a bookkeeping
+// write would be the wrong trade.
+func (r *APIKeyRepository) TouchLastUsed(ctx context.Context, id string) error {
+	_, err := r.db.Exec(ctx, `UPDATE api_keys SET last_used_at = now() WHERE id = $1`, id)
+	return err
 }

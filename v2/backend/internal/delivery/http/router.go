@@ -32,9 +32,16 @@ type Handlers struct {
 	Public     *handler.PublicHandler
 	Governance *handler.GovernanceHandler
 	Narration  *handler.NarrationHandler
+	External   *handler.ExternalHandler
 }
 
-func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionValidator, allowedOrigins []string) http.Handler {
+func NewRouter(
+	h Handlers,
+	sessions *session.Manager,
+	validator domain.SessionValidator,
+	apiKeys domain.APIKeyRepository,
+	allowedOrigins []string,
+) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(chimw.RequestID)
@@ -55,6 +62,20 @@ func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionVa
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		handler.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	// Machine-facing API, mounted outside /api so no browser-oriented middleware
+	// applies to it. It authenticates with a key rather than a cookie, so the
+	// Origin check would be meaningless — a server-to-server caller sends no
+	// Origin, and CSRF needs an ambient credential this route does not have.
+	r.Route("/external/v1", func(ext chi.Router) {
+		ext.Use(middleware.LimitBody(middleware.DefaultMaxBody))
+		ext.Use(httprate.LimitByIP(120, time.Minute))
+		ext.Use(middleware.RequireAPIKey(apiKeys, "finance"))
+
+		ext.Get("/members", h.External.ListMembers)
+		ext.Get("/members/{id}", h.External.GetMember)
+		ext.Post("/members/{id}/renewal", h.External.Renew)
 	})
 
 	r.Route("/api", func(api chi.Router) {

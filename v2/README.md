@@ -210,6 +210,10 @@ Yang aktif, dan bagaimana masing-masing diuji:
 | Security header di API dan nginx | CSP, X-Frame-Options, nosniff, Referrer-Policy, `Cache-Control: no-store` |
 | Kebijakan password (min 10 rune, tolak yang umum) | Dihitung per rune, bukan byte |
 | Isolasi chapter & penjaga eskalasi peran | Lihat daftar di atas |
+| Lockout akun setelah 8 kegagalan | Password benar pun ditolak selama terkunci, dengan pesan identik |
+| Retensi audit otomatis | activity_logs 180 hari, login_audit 90 hari |
+| Scanning dependensi di CI | `govulncheck` + `npm audit` |
+| TLS siap pakai | Profil compose terpisah, lihat di bawah |
 
 Verifikasi sesi ke database itu satu pembacaan primary key ber-index per request.
 Menambahkan cache akan menukar kebenaran (izin basi) dengan penghematan yang
@@ -290,6 +294,65 @@ diberi 6 MB. Sebelumnya nginx memakai default 1 MB-nya sendiri, yang diam-diam
 membatalkan klaim 5 MB pada import — dan mengembalikan halaman HTML nginx alih-
 alih pesan JSON aplikasi. Terverifikasi: file 1,4 MB kini masuk (17.571 baris),
 sementara body JSON 2 MB ke endpoint lain tetap ditolak 413.
+
+## API eksternal
+
+Untuk integrasi mesin, mis. sistem keuangan yang membaca status renewal member.
+
+```
+GET  /external/v1/members
+GET  /external/v1/members/{id}
+POST /external/v1/members/{id}/renewal
+```
+
+Autentikasi memakai API key, bukan cookie: `Authorization: Bearer <key>` atau
+`X-API-Key: <key>`. Key diterbitkan dari layar API Keys.
+
+Dipasang di luar `/api` supaya tidak kena middleware yang berorientasi browser —
+pemanggil server-ke-server tidak mengirim `Origin`, dan CSRF butuh kredensial
+ambient yang route ini memang tidak punya.
+
+Responsnya sengaja lebih sempit daripada API internal: integrasi butuh status
+keanggotaan dan tanggal renewal, bukan nomor telepon, catatan, atau siapa yang
+mengajak. `is_overdue` diturunkan dari tanggalnya, bukan disimpan, jadi tidak
+bisa berbeda dari sumbernya.
+
+Key dicari lewat hash SHA-256 — plaintext-nya tidak pernah disimpan, jadi tidak
+ada yang bisa dibandingkan selain digest. Key tidak ada, dinonaktifkan, dan
+kedaluwarsa semuanya menghasilkan pesan yang sama; membedakannya akan memberi
+tahu penyerang mana tebakan yang mendekati.
+
+## Lockout akun
+
+Delapan kegagalan mengunci akun selama 15 menit. Rate limit per IP sudah meredam
+serangan dari satu sumber, tapi penyerang dengan banyak alamat melewatinya
+begitu saja — menghitung kegagalan per akun itulah yang membuat tebakan
+terdistribusi jadi mahal.
+
+Penghitungnya ada di baris user, bukan di memori, jadi bertahan melewati
+restart: penyerang yang bisa memaksa restart tidak boleh mendapat papan bersih.
+Terverifikasi: password **yang benar** pun ditolak selama terkunci, dengan pesan
+persis sama seperti password salah — mengatakan "terkunci" akan mengonfirmasi
+bahwa akunnya ada dan memberi tahu penyerang bahwa tebakannya berhasil.
+
+## TLS
+
+Konfigurasi TLS ada di `frontend/nginx-tls.conf`, dijalankan lewat profil
+terpisah:
+
+```bash
+docker compose --profile tls up -d web-tls
+```
+
+Bukan default karena butuh sertifikat, dan compose yang gagal start tanpa
+sertifikat itu pengalaman pertama yang lebih buruk daripada HTTP polos di
+localhost. Cara membuat sertifikat ada di `frontend/tls/README.md`.
+
+Blok `/.well-known/acme-challenge/` sengaja tetap dilayani lewat HTTP polos:
+kalau ikut dialihkan ke HTTPS, perpanjangan Let's Encrypt gagal dan situs mati
+saat sertifikat lama kedaluwarsa. HSTS hanya aktif di konfigurasi TLS — browser
+yang pernah melihatnya menolak HTTP polos selama setahun, jadi mengirimkannya
+dengan sertifikat yang belum benar akan mengunci pengguna di luar.
 
 ## CI
 
