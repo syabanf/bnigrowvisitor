@@ -59,6 +59,12 @@ func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionVa
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(middleware.RequireSameOrigin(allowedOrigins))
+		api.Use(middleware.LimitBody(middleware.DefaultMaxBody))
+
+		// A ceiling across the whole API, well above what a person clicking
+		// through the UI generates but low enough to blunt a scripted flood.
+		// The tighter per-endpoint limits below still apply on top.
+		api.Use(httprate.LimitByIP(300, time.Minute))
 
 		// Login is the one unauthenticated write, so it is the one endpoint an
 		// attacker can hammer. Throttling by IP turns an offline-speed password

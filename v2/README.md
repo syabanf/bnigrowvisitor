@@ -260,6 +260,37 @@ cd frontend && npm test
 - Pembagian nol pada perhitungan konversi/kehadiran, dan member tanpa tanggal
   renewal yang tidak boleh dianggap jatuh tempo
 
+## Performa
+
+Yang diukur, dan apa yang berubah:
+
+| | Sebelum | Sesudah |
+|---|---|---|
+| Bundle JS terkirim | 226 KB mentah | **62 KB** (gzip, hemat 67%) |
+| Respons API `/visitors?limit=200` | 19 KB mentah | **2,5 KB** (gzip, hemat 87%) |
+| Chunk JS | 1 (semua route) | **22** (per halaman) |
+| Foreign key tanpa indeks | 9 | **0** |
+| Query pencarian pada 17 ribu baris | Seq Scan 8,4 ms, membuang 17.621 baris | **Bitmap Index Scan 1,2 ms** |
+
+Angka pencarian itu diukur di level SQL lewat `EXPLAIN ANALYZE`, bukan di level
+endpoint — pada data kecil selisihnya tenggelam di bawah overhead HTTP, dan
+perbandingan endpoint yang saya coba tidak terkendali. Yang membuat perubahan
+ini layak adalah bentuk rencana query-nya: seq scan tumbuh linear terhadap
+jumlah baris, index scan tidak.
+
+`ILIKE '%kata%'` tidak bisa memakai indeks B-tree karena wildcard-nya di depan,
+jadi pencarian memakai indeks trigram GIN (`pg_trgm`). GIN, bukan GiST: lebih
+lambat menulis, jauh lebih cepat mencari, dan kolom ini jauh lebih sering dibaca
+daripada ditulis.
+
+### Batas ukuran body
+
+Dibatasi 1 MB di nginx **dan** di middleware Go, kecuali route import CSV yang
+diberi 6 MB. Sebelumnya nginx memakai default 1 MB-nya sendiri, yang diam-diam
+membatalkan klaim 5 MB pada import — dan mengembalikan halaman HTML nginx alih-
+alih pesan JSON aplikasi. Terverifikasi: file 1,4 MB kini masuk (17.571 baris),
+sementara body JSON 2 MB ke endpoint lain tetap ditolak 413.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres

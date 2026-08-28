@@ -433,3 +433,7 @@ td select { min-width: 9rem; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Placeholder while a lazily-loaded route chunk arrives. Reserving height stops
+   the page collapsing and then jumping when the chunk resolves. */
+.route-loading { padding: 3rem 1rem; min-height: 12rem; }

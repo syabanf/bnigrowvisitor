@@ -1,31 +1,35 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth'
 import Layout from './components/Layout'
 import QuickTour from './tour/QuickTour'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Visitors from './pages/Visitors'
-import Members from './pages/Members'
-import Guests from './pages/Guests'
-import Accounts from './pages/Accounts'
-import National from './pages/National'
-import MCQA from './pages/MCQA'
-import Meetings from './pages/Meetings'
-import WaBlast from './pages/WaBlast'
-import Transfer from './pages/Transfer'
-import Activity from './pages/Activity'
 import Confirm from './pages/Confirm'
-import Pipeline from './pages/Pipeline'
-import MyAccount from './pages/MyAccount'
-import Master from './pages/Master'
-import Policies from './pages/Policies'
-import ApiKeys from './pages/ApiKeys'
-import Governance from './pages/Governance'
-import TextFormat from './pages/TextFormat'
 import { registerServiceWorker } from './pwa'
 import './styles.css'
+
+// Every authenticated screen is its own chunk. Before this the entry bundle
+// carried all of them, so opening the login page downloaded the kanban board
+// and Master Wilayah too.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Visitors = lazy(() => import('./pages/Visitors'))
+const Members = lazy(() => import('./pages/Members'))
+const Guests = lazy(() => import('./pages/Guests'))
+const Accounts = lazy(() => import('./pages/Accounts'))
+const National = lazy(() => import('./pages/National'))
+const MCQA = lazy(() => import('./pages/MCQA'))
+const Meetings = lazy(() => import('./pages/Meetings'))
+const WaBlast = lazy(() => import('./pages/WaBlast'))
+const Transfer = lazy(() => import('./pages/Transfer'))
+const Activity = lazy(() => import('./pages/Activity'))
+const Pipeline = lazy(() => import('./pages/Pipeline'))
+const MyAccount = lazy(() => import('./pages/MyAccount'))
+const Master = lazy(() => import('./pages/Master'))
+const Policies = lazy(() => import('./pages/Policies'))
+const ApiKeys = lazy(() => import('./pages/ApiKeys'))
+const Governance = lazy(() => import('./pages/Governance'))
+const TextFormat = lazy(() => import('./pages/TextFormat'))
 
 function App() {
   const { user, loading } = useAuth()
@@ -46,7 +50,8 @@ function App() {
   return (
     <>
       <QuickTour />
-      <Routes>
+      <Suspense fallback={<div className="center muted route-loading">Memuat…</div>}>
+        <Routes>
         <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="pipeline" element={<Pipeline />} />
@@ -71,7 +76,8 @@ function App() {
         <Route path="api-keys" element={isNational ? <ApiKeys /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </>
   )
 }
