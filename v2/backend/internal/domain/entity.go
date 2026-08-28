@@ -21,6 +21,14 @@ func (r Role) IsNational() bool {
 	return r == RoleAdmin || r == RoleNationalAdmin
 }
 
+func (r Role) Valid() bool {
+	switch r {
+	case RoleAdmin, RoleNationalAdmin, RoleChapterAdmin, RolePIC, RoleMember:
+		return true
+	}
+	return false
+}
+
 type VisitorStatus string
 
 const (

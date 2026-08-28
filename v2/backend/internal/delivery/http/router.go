@@ -14,9 +14,13 @@ import (
 )
 
 type Handlers struct {
-	Auth    *handler.AuthHandler
-	Visitor *handler.VisitorHandler
-	Chapter *handler.ChapterHandler
+	Auth      *handler.AuthHandler
+	Visitor   *handler.VisitorHandler
+	Chapter   *handler.ChapterHandler
+	Member    *handler.MemberHandler
+	Guest     *handler.GuestHandler
+	Dashboard *handler.DashboardHandler
+	Account   *handler.AccountHandler
 }
 
 func NewRouter(h Handlers, sessions *session.Manager, allowedOrigins []string) http.Handler {
@@ -59,6 +63,35 @@ func NewRouter(h Handlers, sessions *session.Manager, allowedOrigins []string) h
 				v.Get("/{id}", h.Visitor.Get)
 				v.Patch("/{id}", h.Visitor.Update)
 				v.Delete("/{id}", h.Visitor.Delete)
+			})
+
+			private.Route("/members", func(m chi.Router) {
+				m.Get("/", h.Member.List)
+				m.Post("/", h.Member.Create)
+				m.Get("/{id}", h.Member.Get)
+				m.Patch("/{id}", h.Member.Update)
+				m.Delete("/{id}", h.Member.Delete)
+			})
+
+			private.Route("/guests", func(g chi.Router) {
+				g.Get("/", h.Guest.List)
+				g.Post("/", h.Guest.Create)
+				g.Get("/{id}", h.Guest.Get)
+				g.Patch("/{id}", h.Guest.Update)
+				g.Delete("/{id}", h.Guest.Delete)
+			})
+
+			private.Get("/dashboard/chapter", h.Dashboard.Chapter)
+			private.Get("/dashboard/national", h.Dashboard.National)
+
+			private.Get("/pics", h.Account.ListPICs)
+			private.Post("/account/change-password", h.Account.ChangeOwnPassword)
+
+			private.Route("/accounts", func(a chi.Router) {
+				a.Get("/", h.Account.List)
+				a.Post("/", h.Account.Create)
+				a.Post("/{id}/password", h.Account.SetPassword)
+				a.Patch("/{id}/active", h.Account.SetActive)
 			})
 		})
 	})

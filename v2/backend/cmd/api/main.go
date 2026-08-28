@@ -53,6 +53,9 @@ func run(logger *slog.Logger) error {
 	visitors := postgres.NewVisitorRepository(pool)
 	chapters := postgres.NewChapterRepository(pool)
 	meetings := postgres.NewMeetingRepository(pool)
+	members := postgres.NewMemberRepository(pool)
+	guests := postgres.NewGuestRepository(pool)
+	stats := postgres.NewStatsRepository(pool)
 	audit := postgres.NewLoginAuditRepository(pool)
 
 	sessions := session.New(cfg.SessionSecret, cfg.SessionMaxAge)
@@ -60,12 +63,20 @@ func run(logger *slog.Logger) error {
 
 	authUC := usecase.NewAuthUsecase(users, audit, appLogger)
 	visitorUC := usecase.NewVisitorUsecase(visitors, chapters)
+	memberUC := usecase.NewMemberUsecase(members, chapters)
+	guestUC := usecase.NewGuestUsecase(guests, chapters)
+	dashboardUC := usecase.NewDashboardUsecase(stats)
+	accountUC := usecase.NewAccountUsecase(users, chapters)
 
 	secureCookies := cfg.Environment == "production"
 	router := nethttp.NewRouter(nethttp.Handlers{
-		Auth:    handler.NewAuthHandler(authUC, sessions, secureCookies),
-		Visitor: handler.NewVisitorHandler(visitorUC),
-		Chapter: handler.NewChapterHandler(chapters, meetings),
+		Auth:      handler.NewAuthHandler(authUC, sessions, secureCookies),
+		Visitor:   handler.NewVisitorHandler(visitorUC),
+		Chapter:   handler.NewChapterHandler(chapters, meetings),
+		Member:    handler.NewMemberHandler(memberUC),
+		Guest:     handler.NewGuestHandler(guestUC),
+		Dashboard: handler.NewDashboardHandler(dashboardUC),
+		Account:   handler.NewAccountHandler(accountUC),
 	}, sessions, cfg.AllowedOrigins)
 
 	srv := &http.Server{

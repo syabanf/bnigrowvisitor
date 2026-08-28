@@ -5,6 +5,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -61,4 +62,82 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 		return nil, err
 	}
 	return &u, nil
+}
+
+// ListByScope returns the accounts a caller may manage or assign. roles narrows
+// it to e.g. just PICs for the assignment picker; empty means every role.
+func (r *UserRepository) ListByScope(ctx context.Context, scope domain.Scope, roles []domain.Role) ([]domain.User, error) {
+	query := `SELECT ` + userColumns + userJoins + ` WHERE u.is_active = true`
+	var args []any
+
+	if scope.ChapterID != nil {
+		args = append(args, *scope.ChapterID)
+		query += fmt.Sprintf(` AND u.chapter_id = $%d`, len(args))
+	}
+	if len(roles) > 0 {
+		names := make([]string, len(roles))
+		for i, role := range roles {
+			names[i] = string(role)
+		}
+		args = append(args, names)
+		query += fmt.Sprintf(` AND u.role::text = ANY($%d)`, len(args))
+	}
+	query += ` ORDER BY u.name`
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]domain.User, 0)
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		// Defence in depth: the hash is already tagged json:"-", but a list
+		// endpoint has no use for it at all.
+		u.PasswordHash = ""
+		users = append(users, *u)
+	}
+	return users, rows.Err()
+}
+
+func (r *UserRepository) Create(ctx context.Context, u *domain.User) error {
+	err := r.db.QueryRow(ctx, `
+		INSERT INTO users (name, email, password_hash, role, phone, organization_id, chapter_id)
+		VALUES ($1, lower($2), $3, $4, NULLIF($5,''), $6, $7)
+		RETURNING id, created_at, updated_at`,
+		u.Name, u.Email, u.PasswordHash, u.Role, u.Phone, u.OrganizationID, u.ChapterID,
+	).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
+	return translate(err)
+}
+
+func (r *UserRepository) Update(ctx context.Context, u *domain.User) error {
+	// password_hash is deliberately absent: changing a password goes through
+	// UpdatePasswordHash so it always passes the hashing path.
+	err := r.db.QueryRow(ctx, `
+		UPDATE users SET name = $2, email = lower($3), role = $4,
+		                 phone = NULLIF($5,''), chapter_id = $6, updated_at = now()
+		WHERE id = $1 RETURNING updated_at`,
+		u.ID, u.Name, u.Email, u.Role, u.Phone, u.ChapterID,
+	).Scan(&u.UpdatedAt)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrNotFound
+	}
+	return translate(err)
+}
+
+func (r *UserRepository) SetActive(ctx context.Context, id string, active bool) error {
+	tag, err := r.db.Exec(ctx,
+		`UPDATE users SET is_active = $2, updated_at = now() WHERE id = $1`, id, active)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }

@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { STATUS_LABEL, type ListResult, type Visitor, type VisitorStatus } from '../api/types'
-import { useAuth } from '../auth'
 
 export default function Visitors() {
-  const { user, logout } = useAuth()
   const [visitors, setVisitors] = useState<Visitor[]>([])
   const [total, setTotal] = useState(0)
   const [status, setStatus] = useState('')
@@ -49,17 +47,8 @@ export default function Visitors() {
   }
 
   return (
-    <div className="page">
-      <header className="topbar">
-        <div>
-          <h1>Visitor</h1>
-          <p className="muted small">
-            {user?.chapter_name ? `${user.chapter_name} · ` : 'Semua chapter · '}
-            {user?.name} ({user?.role})
-          </p>
-        </div>
-        <button className="btn" onClick={() => void logout()}>Keluar</button>
-      </header>
+    <>
+      <h1>Visitor</h1>
 
       <div className="filters">
         <input
@@ -120,6 +109,6 @@ export default function Visitors() {
           </table>
         </div>
       )}
-    </div>
+    </>
   )
 }

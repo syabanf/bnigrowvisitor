@@ -22,15 +22,7 @@ type ListVisitorsResult struct {
 }
 
 func (uc *VisitorUsecase) List(ctx context.Context, scope domain.Scope, filter domain.VisitorFilter) (*ListVisitorsResult, error) {
-	// An unbounded list is a denial-of-service waiting to happen once a chapter
-	// has thousands of visitors, so the page size is clamped here rather than
-	// trusted from the query string.
-	if filter.Limit <= 0 || filter.Limit > 200 {
-		filter.Limit = 50
-	}
-	if filter.Offset < 0 {
-		filter.Offset = 0
-	}
+	filter.Limit, filter.Offset = clampPage(filter.Limit, filter.Offset)
 
 	items, err := uc.visitors.List(ctx, scope, filter)
 	if err != nil {
@@ -73,7 +65,7 @@ type VisitorInput struct {
 }
 
 func (uc *VisitorUsecase) Create(ctx context.Context, scope domain.Scope, actorID string, in VisitorInput) (*domain.Visitor, error) {
-	chapterID, err := uc.resolveChapter(ctx, scope, in.ChapterID)
+	chapterID, err := resolveChapter(ctx, uc.chapters, scope, in.ChapterID)
 	if err != nil {
 		return nil, err
 	}
@@ -145,30 +137,4 @@ func (uc *VisitorUsecase) Delete(ctx context.Context, scope domain.Scope, id str
 		return err
 	}
 	return uc.visitors.Delete(ctx, id)
-}
-
-// resolveChapter decides which chapter a new record belongs to. A chapter-bound
-// caller cannot choose: they get their own, whatever they asked for.
-func (uc *VisitorUsecase) resolveChapter(ctx context.Context, scope domain.Scope, requested string) (string, error) {
-	if !scope.IsNational {
-		if scope.ChapterID == nil {
-			return "", domain.ErrNoChapterScope
-		}
-		return *scope.ChapterID, nil
-	}
-
-	if requested == "" {
-		if scope.ChapterID == nil {
-			return "", domain.ErrValidation
-		}
-		return *scope.ChapterID, nil
-	}
-	ok, err := uc.chapters.Exists(ctx, requested)
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return "", domain.ErrNotFound
-	}
-	return requested, nil
 }

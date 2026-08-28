@@ -4,10 +4,9 @@ Penulisan ulang aplikasi Next.js di root repo ini, memakai **Vite + React** di
 depan, **Go clean architecture** di belakang, dan **PostgreSQL** langsung
 (bukan Supabase).
 
-> **Status: fondasi + satu irisan vertikal.** Auth dan modul Visitor sudah utuh
-> dari database sampai UI. Modul lain (Member, Guest, MCQA, WA Blast,
-> Export/Import, dashboard nasional, PWA, quick tour) belum diport — lihat
-> [Peta jalan](#peta-jalan).
+> **Status: modul inti selesai.** Auth, Visitor, Member, Guest, dashboard
+> chapter, dashboard nasional, dan pengelolaan akun sudah utuh dari database
+> sampai UI. Sisanya di [Peta jalan](#peta-jalan).
 
 ## Menjalankan
 
@@ -88,28 +87,70 @@ dilaporkan generik — pesan driver bisa membocorkan nama tabel dan potongan que
 **Semua nilai lewat placeholder.** Di `visitor.go` hanya operator dan nama kolom
 yang pernah dirangkai; tidak ada input pemanggil yang masuk ke teks SQL.
 
+## Modul
+
+| Modul | API | UI |
+|---|---|---|
+| Auth (login, sesi, ganti password sendiri) | ✅ | ✅ |
+| Visitor | ✅ CRUD, filter, cari | ✅ |
+| Member (termasuk penanda renewal) | ✅ CRUD, filter, cari | ✅ |
+| Guest | ✅ CRUD, cari | ✅ |
+| Meeting | ✅ | daftar saja |
+| Dashboard chapter | ✅ | ✅ |
+| Dashboard nasional | ✅ | ✅ |
+| Kelola akun / PIC | ✅ | ✅ |
+
 ## Yang sudah terverifikasi
 
-Diuji terhadap stack yang benar-benar berjalan:
+Diuji terhadap stack yang benar-benar berjalan, bukan mock:
 
+**Isolasi antar-chapter**
 - `/api/visitors` tanpa sesi → 401
-- Chapter admin melihat 4 visitor chapternya, bukan 5 baris seluruh tabel
-- Chapter admin membaca **dan** menghapus visitor chapter lain lewat ID → 403
-- National admin melihat semua chapter dan boleh membaca baris tersebut
-- Create / update / delete, pencarian, dan penolakan status tak dikenal (400)
-- `chapter_id` yang dipalsukan saat create diabaikan
+- Chapter admin melihat hanya chapternya di keempat modul (visitor 4/5,
+  member 4/6, guest 2/3, meeting 2/3)
+- Membaca **dan** menghapus baris chapter lain lewat ID → 403
+- `chapter_id` yang dipalsukan saat create diabaikan — barisnya tetap masuk ke
+  chapter pemanggil
+- Chapter admin membuka dashboard nasional → 403
+
+**Eskalasi hak akses**
+- Chapter admin membuat PIC → 201; membuat national_admin, admin, atau sesama
+  chapter_admin → 403
+- PIC membuat akun apa pun → 403
+- Chapter admin mereset password atau menonaktifkan akun chapter lain → 403,
+  dan akun targetnya tetap bisa login dengan password lamanya
+- Password national admin tak bisa disentuh chapter admin (akun tanpa chapter)
+
+**Fungsional**
+- CRUD penuh visitor, member, guest; pencarian; status tak dikenal → 400
+- Dashboard: hitungan cocok dengan daftar, dan chapter tanpa visitor tetap
+  muncul di tabel nasional (bukan hilang)
 - Sesi menembus proxy nginx (cookie tetap first-party)
-- `go build ./...`, `go vet ./...`, dan `tsc --noEmit` bersih
+
+**Statis**
+- `go build ./...`, `go vet ./...`, `go test ./...`, `tsc --noEmit`, `vite build`
+
+### Uji otomatis
+
+`go test ./...` mencakup properti yang paling mahal kalau salah:
+
+- `ResolveScope` — setiap kombinasi peran × chapter yang diminta, termasuk
+  usaha melebarkan akses lewat `chapterId` palsu
+- `Scope.Allows` — termasuk scope kosong non-nasional yang harus menolak semua
+- `validateGrant` — setiap anak tangga eskalasi peran
+- Sesi HMAC — payload yang diutak-atik, tag rusak, kunci asing, token
+  kedaluwarsa, dan token cacat bentuk
+- Pembagian nol pada perhitungan konversi/kehadiran, dan member tanpa tanggal
+  renewal yang tidak boleh dianggap jatuh tempo
 
 ## Peta jalan
 
 Belum diport dari aplikasi Next.js:
 
-- [ ] Member, Guest, MCQA, Weekly Meeting, Kelola PIC
-- [ ] WA Blast dan template pesan
+- [ ] MCQA (hasil airtime) dan Weekly Meeting sebagai layar tersendiri
+- [ ] WA Blast dan template pesan `{link_hadir}`
 - [ ] Export / Import Excel
-- [ ] Dashboard chapter dan dashboard nasional (health score, alert, funnel)
-- [ ] Multi-tenant per subdomain
+- [ ] Multi-tenant per subdomain (branding chapter dari host)
 - [ ] PWA, quick tour bernarasi, asisten AI
-- [ ] Uji otomatis untuk `usecase` dan `domain` — keduanya sengaja bebas
-      I/O, jadi bisa diuji tanpa database
+- [ ] Halaman konfirmasi kehadiran publik (`/wm/{token}`)
+- [ ] Uji integrasi terhadap Postgres sungguhan (yang ada sekarang murni unit)

@@ -51,3 +51,36 @@ func (r *MeetingRepository) FindByID(ctx context.Context, id string) (*domain.Me
 	}
 	return &m, err
 }
+
+func (r *MeetingRepository) Create(ctx context.Context, m *domain.Meeting) error {
+	return r.db.QueryRow(ctx, `
+		INSERT INTO meetings (chapter_id, title, meeting_date, location)
+		VALUES ($1, $2, $3, NULLIF($4,''))
+		RETURNING id, created_at`,
+		m.ChapterID, m.Title, m.MeetingDate, m.Location,
+	).Scan(&m.ID, &m.CreatedAt)
+}
+
+func (r *MeetingRepository) Update(ctx context.Context, m *domain.Meeting) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE meetings SET title = $2, meeting_date = $3, location = NULLIF($4,''), updated_at = now()
+		WHERE id = $1`, m.ID, m.Title, m.MeetingDate, m.Location)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (r *MeetingRepository) Delete(ctx context.Context, id string) error {
+	tag, err := r.db.Exec(ctx, `DELETE FROM meetings WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}

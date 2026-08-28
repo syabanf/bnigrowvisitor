@@ -10,6 +10,12 @@ type UserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*User, error)
 	FindByID(ctx context.Context, id string) (*User, error)
 	UpdatePasswordHash(ctx context.Context, id, hash string) error
+
+	// ListByScope powers the PIC picker and the account-management screen.
+	ListByScope(ctx context.Context, scope Scope, roles []Role) ([]User, error)
+	Create(ctx context.Context, u *User) error
+	Update(ctx context.Context, u *User) error
+	SetActive(ctx context.Context, id string, active bool) error
 }
 
 type ChapterRepository interface {
@@ -39,6 +45,49 @@ type VisitorRepository interface {
 type MeetingRepository interface {
 	List(ctx context.Context, scope Scope) ([]Meeting, error)
 	FindByID(ctx context.Context, id string) (*Meeting, error)
+	Create(ctx context.Context, m *Meeting) error
+	Update(ctx context.Context, m *Meeting) error
+	Delete(ctx context.Context, id string) error
+}
+
+type MemberFilter struct {
+	Status string
+	Search string
+	Limit  int
+	Offset int
+}
+
+type MemberRepository interface {
+	List(ctx context.Context, scope Scope, filter MemberFilter) ([]Member, error)
+	Count(ctx context.Context, scope Scope, filter MemberFilter) (int, error)
+	FindByID(ctx context.Context, id string) (*Member, error)
+	Create(ctx context.Context, m *Member) error
+	Update(ctx context.Context, m *Member) error
+	Delete(ctx context.Context, id string) error
+}
+
+type GuestFilter struct {
+	MeetingID string
+	Search    string
+	Limit     int
+	Offset    int
+}
+
+type GuestRepository interface {
+	List(ctx context.Context, scope Scope, filter GuestFilter) ([]Guest, error)
+	Count(ctx context.Context, scope Scope, filter GuestFilter) (int, error)
+	FindByID(ctx context.Context, id string) (*Guest, error)
+	Create(ctx context.Context, g *Guest) error
+	Update(ctx context.Context, g *Guest) error
+	Delete(ctx context.Context, id string) error
+}
+
+// StatsRepository aggregates in SQL. Kept separate from the entity repositories
+// because it answers questions, not "give me rows".
+type StatsRepository interface {
+	ChapterStats(ctx context.Context, scope Scope) (*ChapterStats, error)
+	PerChapterStats(ctx context.Context) ([]ChapterStats, error)
+	VisitorStatusBreakdown(ctx context.Context, scope Scope) ([]StatusCount, error)
 }
 
 // LoginAuditRepository records every attempt, successful or not. Kept as its
