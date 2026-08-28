@@ -12,6 +12,7 @@ import (
 	"bni-visitor/internal/delivery/http/middleware"
 	"bni-visitor/internal/domain"
 	"bni-visitor/internal/platform/session"
+	"bni-visitor/internal/usecase"
 )
 
 func WriteJSON(w http.ResponseWriter, status int, body any) {
@@ -71,4 +72,14 @@ func SessionFrom(ctx context.Context) (*session.Payload, bool) {
 
 func ScopeFrom(ctx context.Context, requested string) (domain.Scope, *session.Payload, error) {
 	return middleware.ScopeFrom(ctx, requested)
+}
+
+// ActorFrom turns the verified session into the audit actor. Built here so no
+// handler has to remember which fields the log needs.
+func ActorFrom(ctx context.Context) usecase.Actor {
+	p, ok := middleware.SessionFrom(ctx)
+	if !ok {
+		return usecase.Actor{}
+	}
+	return usecase.Actor{ID: p.Sub, Name: p.Email, Role: p.Role}
 }

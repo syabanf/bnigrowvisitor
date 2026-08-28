@@ -11,10 +11,16 @@ import (
 type MemberUsecase struct {
 	members  domain.MemberRepository
 	chapters domain.ChapterRepository
+	audit    *auditor
 }
 
-func NewMemberUsecase(members domain.MemberRepository, chapters domain.ChapterRepository) *MemberUsecase {
-	return &MemberUsecase{members: members, chapters: chapters}
+func NewMemberUsecase(
+	members domain.MemberRepository,
+	chapters domain.ChapterRepository,
+	logs domain.ActivityLogRepository,
+	logger Logger,
+) *MemberUsecase {
+	return &MemberUsecase{members: members, chapters: chapters, audit: newAuditor(logs, logger)}
 }
 
 type ListMembersResult struct {
@@ -60,7 +66,7 @@ type MemberInput struct {
 	ChapterID     string
 }
 
-func (uc *MemberUsecase) Create(ctx context.Context, scope domain.Scope, in MemberInput) (*domain.Member, error) {
+func (uc *MemberUsecase) Create(ctx context.Context, scope domain.Scope, actor Actor, in MemberInput) (*domain.Member, error) {
 	chapterID, err := resolveChapter(ctx, uc.chapters, scope, in.ChapterID)
 	if err != nil {
 		return nil, err
@@ -88,10 +94,11 @@ func (uc *MemberUsecase) Create(ctx context.Context, scope domain.Scope, in Memb
 	if err := uc.members.Create(ctx, m); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, m.ChapterID, "create", "member", m.ID, m.Name)
 	return m, nil
 }
 
-func (uc *MemberUsecase) Update(ctx context.Context, scope domain.Scope, id string, in MemberInput) (*domain.Member, error) {
+func (uc *MemberUsecase) Update(ctx context.Context, scope domain.Scope, actor Actor, id string, in MemberInput) (*domain.Member, error) {
 	existing, err := uc.Get(ctx, scope, id)
 	if err != nil {
 		return nil, err
@@ -122,12 +129,18 @@ func (uc *MemberUsecase) Update(ctx context.Context, scope domain.Scope, id stri
 	if err := uc.members.Update(ctx, existing); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, existing.ChapterID, "update", "member", existing.ID, existing.Name)
 	return existing, nil
 }
 
-func (uc *MemberUsecase) Delete(ctx context.Context, scope domain.Scope, id string) error {
-	if _, err := uc.Get(ctx, scope, id); err != nil {
+func (uc *MemberUsecase) Delete(ctx context.Context, scope domain.Scope, actor Actor, id string) error {
+	existing, err := uc.Get(ctx, scope, id)
+	if err != nil {
 		return err
 	}
-	return uc.members.Delete(ctx, id)
+	if err := uc.members.Delete(ctx, id); err != nil {
+		return err
+	}
+	uc.audit.record(ctx, actor, existing.ChapterID, "delete", "member", existing.ID, existing.Name)
+	return nil
 }

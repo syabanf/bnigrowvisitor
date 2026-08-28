@@ -41,7 +41,7 @@ func (h *TransferHandler) ExportVisitors(w http.ResponseWriter, r *http.Request)
 const maxUploadBytes = 5 << 20 // 5 MiB
 
 func (h *TransferHandler) ImportVisitors(w http.ResponseWriter, r *http.Request) {
-	scope, sess, err := ScopeFrom(r.Context(), r.URL.Query().Get("chapterId"))
+	scope, _, err := ScopeFrom(r.Context(), r.URL.Query().Get("chapterId"))
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -57,7 +57,7 @@ func (h *TransferHandler) ImportVisitors(w http.ResponseWriter, r *http.Request)
 	}
 	defer file.Close()
 
-	result, err := h.transfer.ImportVisitors(r.Context(), scope, sess.Sub, file)
+	result, err := h.transfer.ImportVisitors(r.Context(), scope, ActorFrom(r.Context()), file)
 	if err != nil {
 		WriteError(w, err)
 		return

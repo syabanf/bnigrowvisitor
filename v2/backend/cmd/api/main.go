@@ -48,6 +48,12 @@ func run(logger *slog.Logger) error {
 	defer pool.Close()
 	logger.Info("terhubung ke database")
 
+	// Applied on every boot, not just the first: the previous setup relied on
+	// Postgres's init hook, which never runs again once the volume has data.
+	if err := database.Migrate(ctx, pool, logger); err != nil {
+		return err
+	}
+
 	// Infrastructure implementations, injected upward as domain interfaces.
 	users := postgres.NewUserRepository(pool)
 	visitors := postgres.NewVisitorRepository(pool)
@@ -59,20 +65,25 @@ func run(logger *slog.Logger) error {
 	domains := postgres.NewDomainRepository(pool)
 	templates := postgres.NewWATemplateRepository(pool)
 	activity := postgres.NewActivityLogRepository(pool)
+	master := postgres.NewMasterRepository(pool)
+	policies := postgres.NewPolicyRepository(pool)
+	apiKeys := postgres.NewAPIKeyRepository(pool)
+	governance := postgres.NewGovernanceRepository(pool)
 	audit := postgres.NewLoginAuditRepository(pool)
 
 	sessions := session.New(cfg.SessionSecret, cfg.SessionMaxAge)
 	appLogger := &slogAdapter{logger}
 
 	authUC := usecase.NewAuthUsecase(users, audit, appLogger)
-	visitorUC := usecase.NewVisitorUsecase(visitors, chapters)
-	memberUC := usecase.NewMemberUsecase(members, chapters)
-	guestUC := usecase.NewGuestUsecase(guests, chapters)
+	visitorUC := usecase.NewVisitorUsecase(visitors, chapters, activity, appLogger)
+	memberUC := usecase.NewMemberUsecase(members, chapters, activity, appLogger)
+	guestUC := usecase.NewGuestUsecase(guests, chapters, activity, appLogger)
 	dashboardUC := usecase.NewDashboardUsecase(stats)
 	accountUC := usecase.NewAccountUsecase(users, chapters)
 	tenantUC := usecase.NewTenantUsecase(domains, chapters)
 	messagingUC := usecase.NewMessagingUsecase(templates, visitors, chapters, cfg.PublicBaseURL)
 	transferUC := usecase.NewTransferUsecase(visitors, members, chapters)
+	governanceUC := usecase.NewGovernanceUsecase(master, policies, apiKeys, governance)
 
 	secureCookies := cfg.Environment == "production"
 	router := nethttp.NewRouter(nethttp.Handlers{
@@ -89,7 +100,8 @@ func run(logger *slog.Logger) error {
 		Transfer:  handler.NewTransferHandler(transferUC),
 		Tenant:    handler.NewTenantHandler(tenantUC),
 		Activity:  handler.NewActivityHandler(activity),
-		Public:    handler.NewPublicHandler(visitorUC),
+		Public:     handler.NewPublicHandler(visitorUC),
+		Governance: handler.NewGovernanceHandler(governanceUC),
 	}, sessions, users, cfg.AllowedOrigins)
 
 	srv := &http.Server{

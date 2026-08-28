@@ -11,10 +11,16 @@ import (
 type VisitorUsecase struct {
 	visitors domain.VisitorRepository
 	chapters domain.ChapterRepository
+	audit    *auditor
 }
 
-func NewVisitorUsecase(visitors domain.VisitorRepository, chapters domain.ChapterRepository) *VisitorUsecase {
-	return &VisitorUsecase{visitors: visitors, chapters: chapters}
+func NewVisitorUsecase(
+	visitors domain.VisitorRepository,
+	chapters domain.ChapterRepository,
+	logs domain.ActivityLogRepository,
+	logger Logger,
+) *VisitorUsecase {
+	return &VisitorUsecase{visitors: visitors, chapters: chapters, audit: newAuditor(logs, logger)}
 }
 
 type ListVisitorsResult struct {
@@ -67,7 +73,7 @@ type VisitorInput struct {
 	AttendedChoiceNumber *int
 }
 
-func (uc *VisitorUsecase) Create(ctx context.Context, scope domain.Scope, actorID string, in VisitorInput) (*domain.Visitor, error) {
+func (uc *VisitorUsecase) Create(ctx context.Context, scope domain.Scope, actor Actor, in VisitorInput) (*domain.Visitor, error) {
 	chapterID, err := resolveChapter(ctx, uc.chapters, scope, in.ChapterID)
 	if err != nil {
 		return nil, err
@@ -91,15 +97,19 @@ func (uc *VisitorUsecase) Create(ctx context.Context, scope domain.Scope, actorI
 		ChapterID: chapterID, Name: name, Phone: phone, Email: strings.TrimSpace(in.Email),
 		BusinessField: in.BusinessField, Company: in.Company, Gender: in.Gender,
 		ReferralName: in.ReferralName, MeetingID: in.MeetingID, PICID: in.PICID,
-		Status: status, Notes: in.Notes, CreatedBy: &actorID,
+		Status: status, Notes: in.Notes,
+	}
+	if actor.ID != "" {
+		v.CreatedBy = &actor.ID
 	}
 	if err := uc.visitors.Create(ctx, v); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, v.ChapterID, "create", "visitor", v.ID, v.Name)
 	return v, nil
 }
 
-func (uc *VisitorUsecase) Update(ctx context.Context, scope domain.Scope, id string, in VisitorInput) (*domain.Visitor, error) {
+func (uc *VisitorUsecase) Update(ctx context.Context, scope domain.Scope, actor Actor, id string, in VisitorInput) (*domain.Visitor, error) {
 	// Load-then-authorise, so an update can never touch a row the caller was
 	// not allowed to read in the first place.
 	existing, err := uc.Get(ctx, scope, id)
@@ -138,14 +148,22 @@ func (uc *VisitorUsecase) Update(ctx context.Context, scope domain.Scope, id str
 	if err := uc.visitors.Update(ctx, existing); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, existing.ChapterID, "update", "visitor", existing.ID, existing.Name)
 	return existing, nil
 }
 
-func (uc *VisitorUsecase) Delete(ctx context.Context, scope domain.Scope, id string) error {
-	if _, err := uc.Get(ctx, scope, id); err != nil {
+func (uc *VisitorUsecase) Delete(ctx context.Context, scope domain.Scope, actor Actor, id string) error {
+	existing, err := uc.Get(ctx, scope, id)
+	if err != nil {
 		return err
 	}
-	return uc.visitors.Delete(ctx, id)
+	if err := uc.visitors.Delete(ctx, id); err != nil {
+		return err
+	}
+	// Recorded after the delete succeeds, and the label carries the name — the
+	// row is gone, so the log is the only place it survives.
+	uc.audit.record(ctx, actor, existing.ChapterID, "delete", "visitor", existing.ID, existing.Name)
+	return nil
 }
 
 // RecordAirtime stores the MCQA outcome for a visitor who attended.
@@ -153,7 +171,7 @@ func (uc *VisitorUsecase) Delete(ctx context.Context, scope domain.Scope, id str
 // The status guard matters: an airtime result against someone who never turned
 // up would quietly skew the MCQA report, and the database rejects it anyway, so
 // catching it here turns a constraint violation into a clear validation error.
-func (uc *VisitorUsecase) RecordAirtime(ctx context.Context, scope domain.Scope, id string, choice *int) (*domain.Visitor, error) {
+func (uc *VisitorUsecase) RecordAirtime(ctx context.Context, scope domain.Scope, actor Actor, id string, choice *int) (*domain.Visitor, error) {
 	visitor, err := uc.Get(ctx, scope, id)
 	if err != nil {
 		return nil, err
@@ -179,6 +197,7 @@ func (uc *VisitorUsecase) RecordAirtime(ctx context.Context, scope domain.Scope,
 	if err := uc.visitors.Update(ctx, visitor); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, visitor.ChapterID, "update", "mcqa", visitor.ID, visitor.Name)
 	return visitor, nil
 }
 
@@ -203,5 +222,8 @@ func (uc *VisitorUsecase) ConfirmAttendance(ctx context.Context, id string) (*do
 	if err := uc.visitors.Update(ctx, visitor); err != nil {
 		return nil, false, err
 	}
+	// No actor: the visitor confirmed it themselves through the public link.
+	uc.audit.record(ctx, Actor{Name: visitor.Name, Role: "visitor"},
+		visitor.ChapterID, "update", "konfirmasi", visitor.ID, visitor.Name)
 	return visitor, true, nil
 }

@@ -1,0 +1,90 @@
+name: v2 (Go + Vite)
+
+on:
+  push:
+    branches: [main]
+    paths: ['v2/**', '.github/workflows/v2.yml']
+  pull_request:
+    paths: ['v2/**', '.github/workflows/v2.yml']
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    # A real Postgres, because the repository tests exist precisely to exercise
+    # SQL — scope filtering, the unique index, the joins. Running them against a
+    # mock would only prove the strings are the strings.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: bni
+          POSTGRES_PASSWORD: bni_ci_password
+          POSTGRES_DB: bni_visitor
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U bni -d bni_visitor"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    defaults:
+      run:
+        working-directory: v2/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache-dependency-path: v2/backend/go.sum
+
+      - name: Verify dependencies are tidy
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      # Applies the embedded migrations, so the integration tests below run
+      # against the same schema production gets.
+      - name: Prepare schema
+        env:
+          DATABASE_URL: postgres://bni:bni_ci_password@localhost:5432/bni_visitor?sslmode=disable
+          SESSION_SECRET: ci-only-secret-that-is-long-enough-to-pass-validation
+          APP_ENV: test
+        run: |
+          go run ./cmd/api &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/health && break
+            sleep 1
+          done
+          kill %1 || true
+
+      - name: Test
+        env:
+          TEST_DATABASE_URL: postgres://bni:bni_ci_password@localhost:5432/bni_visitor?sslmode=disable
+        run: go test -race ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v2/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build

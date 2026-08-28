@@ -58,7 +58,7 @@ func (h *MCQAHandler) Record(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	visitor, err := h.visitors.RecordAirtime(r.Context(), scope, chi.URLParam(r, "id"), req.Choice)
+	visitor, err := h.visitors.RecordAirtime(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id"), req.Choice)
 	if err != nil {
 		WriteError(w, err)
 		return

@@ -10,9 +10,8 @@ services:
       - "${DB_PORT:-5440}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      # Files here run once, in name order, on an empty data directory — schema
-      # first, then seed.
-      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+      # No init-hook mount: the API applies migrations itself at startup, so a
+      # schema change reaches an existing database instead of only a fresh one.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bni} -d ${POSTGRES_DB:-bni_visitor}"]
       interval: 5s

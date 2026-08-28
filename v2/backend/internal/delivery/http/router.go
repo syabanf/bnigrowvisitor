@@ -29,7 +29,8 @@ type Handlers struct {
 	Transfer  *handler.TransferHandler
 	Tenant    *handler.TenantHandler
 	Activity  *handler.ActivityHandler
-	Public    *handler.PublicHandler
+	Public     *handler.PublicHandler
+	Governance *handler.GovernanceHandler
 }
 
 func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionValidator, allowedOrigins []string) http.Handler {
@@ -132,6 +133,30 @@ func NewRouter(h Handlers, sessions *session.Manager, validator domain.SessionVa
 			private.Get("/export/visitors", h.Transfer.ExportVisitors)
 			private.Post("/import/visitors", h.Transfer.ImportVisitors)
 			private.Get("/activity", h.Activity.List)
+
+			// National-only. The use case refuses a chapter-bound caller, so
+			// the gate is not merely a hidden nav link.
+			private.Route("/master", func(m chi.Router) {
+				m.Get("/", h.Governance.Master)
+				m.Post("/cities", h.Governance.CreateCity)
+				m.Post("/areas", h.Governance.CreateArea)
+				m.Post("/chapters", h.Governance.CreateChapter)
+				m.Patch("/chapters/{id}/active", h.Governance.SetChapterActive)
+			})
+
+			private.Route("/policies", func(p chi.Router) {
+				p.Get("/", h.Governance.Policies)
+				p.Post("/", h.Governance.SavePolicy)
+			})
+
+			private.Route("/api-keys", func(k chi.Router) {
+				k.Get("/", h.Governance.APIKeys)
+				k.Post("/", h.Governance.CreateAPIKey)
+				k.Patch("/{id}/active", h.Governance.SetAPIKeyActive)
+				k.Delete("/{id}", h.Governance.DeleteAPIKey)
+			})
+
+			private.Get("/governance/logins", h.Governance.Logins)
 
 			private.Get("/pics", h.Account.ListPICs)
 			private.Post("/account/change-password", h.Account.ChangeOwnPassword)

@@ -82,7 +82,7 @@ func (r visitorRequest) toInput() usecase.VisitorInput {
 }
 
 func (h *VisitorHandler) Create(w http.ResponseWriter, r *http.Request) {
-	scope, sess, err := ScopeFrom(r.Context(), r.URL.Query().Get("chapterId"))
+	scope, _, err := ScopeFrom(r.Context(), r.URL.Query().Get("chapterId"))
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -94,7 +94,7 @@ func (h *VisitorHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v, err := h.visitors.Create(r.Context(), scope, sess.Sub, req.toInput())
+	v, err := h.visitors.Create(r.Context(), scope, ActorFrom(r.Context()), req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -115,7 +115,7 @@ func (h *VisitorHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v, err := h.visitors.Update(r.Context(), scope, chi.URLParam(r, "id"), req.toInput())
+	v, err := h.visitors.Update(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id"), req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -129,7 +129,7 @@ func (h *VisitorHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	if err := h.visitors.Delete(r.Context(), scope, chi.URLParam(r, "id")); err != nil {
+	if err := h.visitors.Delete(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id")); err != nil {
 		WriteError(w, err)
 		return
 	}

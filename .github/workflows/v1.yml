@@ -1,0 +1,26 @@
+name: v1 (Next.js)
+
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'package.json', 'package-lock.json', '.github/workflows/v1.yml']
+  pull_request:
+    paths: ['src/**', 'package.json', 'package-lock.json', '.github/workflows/v1.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # No credentials are provided on purpose: the app falls back to demo mode,
+      # so a build that needs a live Supabase to compile is a regression.
+      - run: npx tsc --noEmit
+      - run: npm run build

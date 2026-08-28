@@ -93,7 +93,7 @@ type ImportError struct {
 }
 
 // ImportVisitors reads the same CSV shape ExportVisitors writes.
-func (uc *TransferUsecase) ImportVisitors(ctx context.Context, scope domain.Scope, actorID string, r io.Reader) (*ImportResult, error) {
+func (uc *TransferUsecase) ImportVisitors(ctx context.Context, scope domain.Scope, actor Actor, r io.Reader) (*ImportResult, error) {
 	chapterID, err := resolveChapter(ctx, uc.chapters, scope, "")
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (uc *TransferUsecase) ImportVisitors(ctx context.Context, scope domain.Scop
 			ReferralName:  field(record, index, "diajak_oleh"),
 			Status:        status,
 			Notes:         field(record, index, "catatan"),
-			CreatedBy:     &actorID,
+			CreatedBy:     actorPtr(actor.ID),
 		}
 
 		if err := uc.visitors.Create(ctx, visitor); err != nil {
@@ -202,4 +202,11 @@ func stripBOM(r io.Reader) io.Reader {
 // ExportFilename gives the download a name that says what and when.
 func ExportFilename(prefix string, now time.Time) string {
 	return fmt.Sprintf("%s-%s.csv", prefix, now.Format("2006-01-02"))
+}
+
+func actorPtr(id string) *string {
+	if id == "" {
+		return nil
+	}
+	return &id
 }

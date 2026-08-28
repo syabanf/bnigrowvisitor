@@ -106,6 +106,26 @@ yang pernah dirangkai; tidak ada input pemanggil yang masuk ke teks SQL.
 | Multi-tenant per host | ✅ | ✅ |
 | Konfirmasi kehadiran publik `/wm/{token}` | ✅ | ✅ |
 | PWA (manifest, service worker, offline) | — | ✅ |
+| Pipeline (papan kanban) | ✅ | ✅ |
+| Profil akun & ubah password sendiri | ✅ | ✅ |
+| Text Format (editor template WA) | ✅ | ✅ |
+| Master Wilayah | ✅ | ✅ |
+| Template & Policy nasional | ✅ | ✅ |
+| Governance & Audit | ✅ | ✅ |
+| API Keys | ✅ | ✅ |
+
+### Migrasi
+
+Dijalankan oleh API sendiri saat start, dari file yang **di-embed ke dalam
+binary**. Sebelumnya memakai `docker-entrypoint-initdb.d` Postgres, yang hanya
+berjalan pada data directory kosong — artinya setiap migrasi setelah boot
+pertama tidak akan pernah diterapkan ke database yang sudah berisi data, dan
+gagalnya diam-diam.
+
+Tiap migrasi berjalan dalam transaksinya sendiri, dicatat di `schema_migrations`
+beserta checksum-nya. Mengubah migrasi yang sudah diterapkan akan **menolak
+start** — kalau sumber dan database sudah tidak sepakat, mendiamkannya adalah
+cara environment saling melenceng.
 
 ### Catatan desain per modul
 
@@ -127,6 +147,20 @@ tanpa menyebut tiga yang mana tidak berguna bagi orang yang harus memperbaikinya
 
 **Export** menulis BOM UTF-8. Tanpa itu Excel membaca file sebagai codepage
 sistem dan merusak setiap nama beraksen.
+
+**Log aktivitas** ditulis dari setiap operasi tulis (visitor, member, guest,
+MCQA, konfirmasi publik). Kegagalan mencatat tidak pernah menggagalkan operasi
+yang sudah berhasil — kehilangan satu baris audit itu buruk, membatalkan visitor
+yang sudah tersimpan karena insert audit gagal jauh lebih buruk. Entri `delete`
+menyimpan namanya, karena barisnya sudah hilang dan log adalah satu-satunya
+tempat ia bertahan.
+
+**API key** hanya disimpan hash-nya. Kunci aslinya tampil sekali saat dibuat dan
+tidak bisa dipulihkan — itulah yang membuat kebocoran database bisa ditanggung.
+
+**Layar national-only** (Master Wilayah, Policy, Audit, API Keys) ditolak di
+use case, bukan sekadar disembunyikan dari nav. Terverifikasi: chapter admin
+mendapat 403 di keempatnya.
 
 **Konfirmasi publik** tidak pernah memundurkan status. Membuka ulang tautan WA
 lama tidak bisa membatalkan catatan kehadiran, dan responsnya hanya memuat nama
@@ -226,6 +260,15 @@ cd frontend && npm test
 - Pembagian nol pada perhitungan konversi/kehadiran, dan member tanpa tanggal
   renewal yang tidak boleh dianggap jatuh tempo
 
+## CI
+
+`.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres
+sungguhan, menerapkan migrasi lewat API-nya sendiri, lalu menjalankan seluruh
+tes termasuk yang integrasi, dengan `-race`.
+
+Job v1 sengaja tidak diberi kredensial: aplikasinya jatuh ke demo mode, jadi
+build yang membutuhkan Supabase hidup untuk bisa dikompilasi adalah regresi.
+
 ## Peta jalan
 
 Fitur sudah setara dengan aplikasi Next.js. Yang belum:
@@ -235,5 +278,8 @@ Fitur sudah setara dengan aplikasi Next.js. Yang belum:
 - [ ] **Quick tour bernarasi** — v1 memakai ElevenLabs; jalur yang sama akan
       mengulang masalah kunci publik, jadi ditunda sampai kuncinya dikelola
       lewat secret manager
-- [ ] **Import Excel (.xlsx)** — yang ada baru CSV, yang menutup sebagian besar
-      kebutuhan tanpa menambah dependensi parser
+- [ ] **OCR** input visitor dari foto — butuh mesin OCR (Tesseract atau layanan
+      awan); keputusan dependensinya belum diambil
+- [ ] **Import Excel (.xlsx)** — yang ada baru CSV
+- [ ] **HTTPS/TLS, backup terjadwal, observability** — semuanya keputusan
+      deployment, belum ada di compose

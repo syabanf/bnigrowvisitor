@@ -11,10 +11,16 @@ import (
 type GuestUsecase struct {
 	guests   domain.GuestRepository
 	chapters domain.ChapterRepository
+	audit    *auditor
 }
 
-func NewGuestUsecase(guests domain.GuestRepository, chapters domain.ChapterRepository) *GuestUsecase {
-	return &GuestUsecase{guests: guests, chapters: chapters}
+func NewGuestUsecase(
+	guests domain.GuestRepository,
+	chapters domain.ChapterRepository,
+	logs domain.ActivityLogRepository,
+	logger Logger,
+) *GuestUsecase {
+	return &GuestUsecase{guests: guests, chapters: chapters, audit: newAuditor(logs, logger)}
 }
 
 type ListGuestsResult struct {
@@ -63,7 +69,7 @@ type GuestInput struct {
 	ChapterID     string
 }
 
-func (uc *GuestUsecase) Create(ctx context.Context, scope domain.Scope, in GuestInput) (*domain.Guest, error) {
+func (uc *GuestUsecase) Create(ctx context.Context, scope domain.Scope, actor Actor, in GuestInput) (*domain.Guest, error) {
 	chapterID, err := resolveChapter(ctx, uc.chapters, scope, in.ChapterID)
 	if err != nil {
 		return nil, err
@@ -84,10 +90,11 @@ func (uc *GuestUsecase) Create(ctx context.Context, scope domain.Scope, in Guest
 	if err := uc.guests.Create(ctx, g); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, g.ChapterID, "create", "guest", g.ID, g.Name)
 	return g, nil
 }
 
-func (uc *GuestUsecase) Update(ctx context.Context, scope domain.Scope, id string, in GuestInput) (*domain.Guest, error) {
+func (uc *GuestUsecase) Update(ctx context.Context, scope domain.Scope, actor Actor, id string, in GuestInput) (*domain.Guest, error) {
 	existing, err := uc.Get(ctx, scope, id)
 	if err != nil {
 		return nil, err
@@ -112,12 +119,18 @@ func (uc *GuestUsecase) Update(ctx context.Context, scope domain.Scope, id strin
 	if err := uc.guests.Update(ctx, existing); err != nil {
 		return nil, err
 	}
+	uc.audit.record(ctx, actor, existing.ChapterID, "update", "guest", existing.ID, existing.Name)
 	return existing, nil
 }
 
-func (uc *GuestUsecase) Delete(ctx context.Context, scope domain.Scope, id string) error {
-	if _, err := uc.Get(ctx, scope, id); err != nil {
+func (uc *GuestUsecase) Delete(ctx context.Context, scope domain.Scope, actor Actor, id string) error {
+	existing, err := uc.Get(ctx, scope, id)
+	if err != nil {
 		return err
 	}
-	return uc.guests.Delete(ctx, id)
+	if err := uc.guests.Delete(ctx, id); err != nil {
+		return err
+	}
+	uc.audit.record(ctx, actor, existing.ChapterID, "delete", "guest", existing.ID, existing.Name)
+	return nil
 }

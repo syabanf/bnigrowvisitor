@@ -84,7 +84,7 @@ func (h *GuestHandler) Create(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	g, err := h.guests.Create(r.Context(), scope, req.toInput())
+	g, err := h.guests.Create(r.Context(), scope, ActorFrom(r.Context()), req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -103,7 +103,7 @@ func (h *GuestHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	g, err := h.guests.Update(r.Context(), scope, chi.URLParam(r, "id"), req.toInput())
+	g, err := h.guests.Update(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id"), req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -117,7 +117,7 @@ func (h *GuestHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	if err := h.guests.Delete(r.Context(), scope, chi.URLParam(r, "id")); err != nil {
+	if err := h.guests.Delete(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id")); err != nil {
 		WriteError(w, err)
 		return
 	}

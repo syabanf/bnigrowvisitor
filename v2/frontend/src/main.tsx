@@ -16,6 +16,13 @@ import WaBlast from './pages/WaBlast'
 import Transfer from './pages/Transfer'
 import Activity from './pages/Activity'
 import Confirm from './pages/Confirm'
+import Pipeline from './pages/Pipeline'
+import MyAccount from './pages/MyAccount'
+import Master from './pages/Master'
+import Policies from './pages/Policies'
+import ApiKeys from './pages/ApiKeys'
+import Governance from './pages/Governance'
+import TextFormat from './pages/TextFormat'
 import { registerServiceWorker } from './pwa'
 import './styles.css'
 
@@ -39,6 +46,7 @@ function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
+        <Route path="pipeline" element={<Pipeline />} />
         <Route path="visitors" element={<Visitors />} />
         <Route path="mcqa" element={<MCQA />} />
         <Route path="members" element={<Members />} />
@@ -47,11 +55,17 @@ function App() {
         <Route path="wa-blast" element={<WaBlast />} />
         <Route path="transfer" element={<Transfer />} />
         <Route path="activity" element={<Activity />} />
+        <Route path="text-format" element={<TextFormat />} />
         <Route path="accounts" element={<Accounts />} />
+        <Route path="my-account" element={<MyAccount />} />
         {/* Guarded in the router too, not just hidden from the nav — the API
             refuses it either way, but a stray URL should not render a broken
             page. */}
         <Route path="national" element={isNational ? <National /> : <Navigate to="/" replace />} />
+        <Route path="master" element={isNational ? <Master /> : <Navigate to="/" replace />} />
+        <Route path="policies" element={isNational ? <Policies /> : <Navigate to="/" replace />} />
+        <Route path="governance" element={isNational ? <Governance /> : <Navigate to="/" replace />} />
+        <Route path="api-keys" element={isNational ? <ApiKeys /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

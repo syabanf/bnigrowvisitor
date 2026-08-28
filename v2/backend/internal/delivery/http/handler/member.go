@@ -82,7 +82,7 @@ func (h *MemberHandler) Create(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	m, err := h.members.Create(r.Context(), scope, req.toInput())
+	m, err := h.members.Create(r.Context(), scope, ActorFrom(r.Context()), req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -101,7 +101,7 @@ func (h *MemberHandler) Update(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	m, err := h.members.Update(r.Context(), scope, chi.URLParam(r, "id"), req.toInput())
+	m, err := h.members.Update(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id"), req.toInput())
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -115,7 +115,7 @@ func (h *MemberHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, err)
 		return
 	}
-	if err := h.members.Delete(r.Context(), scope, chi.URLParam(r, "id")); err != nil {
+	if err := h.members.Delete(r.Context(), scope, ActorFrom(r.Context()), chi.URLParam(r, "id")); err != nil {
 		WriteError(w, err)
 		return
 	}

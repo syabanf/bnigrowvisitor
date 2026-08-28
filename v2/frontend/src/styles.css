@@ -190,3 +190,52 @@ code {
    keep the gesture. */
 .shell__nav { scrollbar-width: none; }
 .shell__nav::-webkit-scrollbar { display: none; }
+
+/* Kanban board */
+.board {
+  display: grid; gap: 0.75rem; margin-top: 1rem;
+  /* Fixed-width columns that scroll horizontally: squeezing six columns into a
+     phone would make every card unreadable. */
+  grid-auto-flow: column; grid-auto-columns: minmax(13rem, 1fr);
+  overflow-x: auto; padding-bottom: 0.5rem;
+}
+.col {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 1rem; display: flex; flex-direction: column; min-height: 8rem;
+}
+.col__head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;
+  padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--line);
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.col__count { font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; }
+.col__body { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.col--blue   .col__head { color: #1d4ed8; }
+.col--amber  .col__head { color: #b45309; }
+.col--teal   .col__head { color: #0f766e; }
+.col--green  .col__head { color: #0f7a3d; }
+.col--violet .col__head { color: #6d28d9; }
+.col--red    .col__head { color: var(--red); }
+
+.card-mini {
+  background: var(--bg); border: 1px solid var(--line);
+  border-radius: 0.7rem; padding: 0.6rem 0.7rem; font-size: 0.82rem;
+}
+.card-mini__actions { display: flex; gap: 0.3rem; margin-top: 0.5rem; }
+.card-mini__actions .btn { padding: 0.2rem 0.55rem; }
+
+/* Definition list on the profile page */
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0; }
+.kv dt { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+         letter-spacing: 0.04em; color: var(--muted); }
+.kv dd { margin: 0; }
+
+.code-area {
+  width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem; line-height: 1.5; padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line); border-radius: 0.7rem; background: var(--surface);
+  color: inherit; resize: vertical;
+}
+
+.row-end { display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; margin-top: 0.7rem; }
+.row-gap { display: flex; flex-wrap: wrap; gap: 0.4rem; }
