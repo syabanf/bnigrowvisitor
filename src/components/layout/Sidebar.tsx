@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { User } from '@/lib/supabase'
 import { isNationalAdmin } from '@/lib/permissions'
 import { ChapterBranding, getChapterBranding } from '@/lib/chapterBranding'
+import { isNationalPage } from '@/lib/navigationContext'
 
 interface SidebarProps {
   currentPage: string
@@ -76,7 +77,7 @@ export default function Sidebar({ currentPage }: SidebarProps) {
   }))
 
   const isSuperAdmin = isNationalAdmin(currentUser)
-  const isNationalArea = isSuperAdmin && ['national-overview', 'national-governance', 'national-policies', 'national-api-keys', 'national-dashboard', 'master'].includes(currentPage)
+  const isNationalArea = isSuperAdmin && isNationalPage(currentPage)
   const nationalNavItems = isSuperAdmin ? [NATIONAL_OVERVIEW_ITEM, ...navItems.slice(0, 2), NATIONAL_GOVERNANCE_ITEM, NATIONAL_POLICY_ITEM, NATIONAL_API_KEYS_ITEM] : []
   const chapterNavItems = navItems.slice(2, 8)
   const dataNavItems = [

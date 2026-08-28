@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import type { ChapterReport, RankingEntry } from '@/lib/national/types'
+import type { ChapterReport, NationalOverview as NationalOverviewData, RankingEntry } from '@/lib/national/types'
 import { toneClasses, severityTone, SEVERITY_LABEL } from '@/lib/national/format'
 import { useNationalOverview, DEFAULT_FILTERS, OverviewFilters } from './useNationalOverview'
 import ChapterDrilldownModal from './ChapterDrilldownModal'
@@ -23,7 +23,7 @@ const PERIOD_OPTIONS = [
   { value: '30d', label: '30 Hari' },
 ]
 
-const RANKING_TABS: { key: keyof ReturnType<typeof rankingMap>; label: string; suffix?: string }[] = [
+const RANKING_TABS: { key: keyof NationalOverviewData['rankings']; label: string; suffix?: string }[] = [
   { key: 'visitors', label: 'Visitor' },
   { key: 'confirmed', label: 'Konfirmasi' },
   { key: 'attended', label: 'Hadir' },
@@ -32,17 +32,18 @@ const RANKING_TABS: { key: keyof ReturnType<typeof rankingMap>; label: string; s
   { key: 'dataQuality', label: 'Data Rapi', suffix: '%' },
 ]
 
-function rankingMap(data: { rankings: Record<string, RankingEntry[]> }) {
-  return data.rankings
-}
-
 export default function NationalOverview() {
   const [filters, setFilters] = useState<OverviewFilters>(DEFAULT_FILTERS)
   const [chapterOptions, setChapterOptions] = useState<ChapterOption[]>([])
   const [selectedChapter, setSelectedChapter] = useState<ChapterReport | null>(null)
   const [rankingTab, setRankingTab] = useState<string>('visitors')
   const [showTargets, setShowTargets] = useState(false)
+  const [fallbackNow, setFallbackNow] = useState(0)
   const { data, loading, error, refetch } = useNationalOverview(filters)
+
+  useEffect(() => {
+    setFallbackNow(Date.now())
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -93,7 +94,7 @@ export default function NationalOverview() {
     })
   }
 
-  const now = data ? Date.parse(data.generatedAt) || Date.now() : Date.now()
+  const now = data ? Date.parse(data.generatedAt) || fallbackNow : fallbackNow
 
   return (
     <div className="space-y-5">

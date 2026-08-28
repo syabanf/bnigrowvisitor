@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic'
 import { getCurrentUser, signOut } from '@/lib/auth'
 import { isNationalAdmin } from '@/lib/permissions'
 import { getChapterRoute } from '@/lib/chapterRoute'
+import { isNationalPage, isNationalPath } from '@/lib/navigationContext'
 
 const GrowAssistant = dynamic(() => import('@/components/assistant/GrowAssistant'), { ssr: false, loading: () => null })
 const MobileTabBar = dynamic(() => import('@/components/layout/MobileTabBar'), { ssr: false, loading: () => null })
@@ -45,6 +46,8 @@ const pathToPage: Record<string, string> = {
   '/pic': 'pic',
   '/weekly': 'weekly',
   '/logs': 'logs',
+  '/account': 'account',
+  '/profile': 'profile',
 }
 
 const pageTitles: Record<string, string> = {
@@ -69,6 +72,8 @@ const pageTitles: Record<string, string> = {
   'pic-accounts': 'Akun PIC',
   weekly: 'Weekly Meeting',
   logs: 'Log',
+  account: 'Profile',
+  profile: 'Profile',
 }
 
 function getPageFromPath(pathname: string) {
@@ -92,6 +97,8 @@ function getPageFromPath(pathname: string) {
     }
     return sectionMap[section] || 'chapter-dashboard'
   }
+
+  if (isNationalPath(pathname)) return 'national-overview'
 
   return pathToPage[pathname] || 'dashboard'
 }
@@ -178,7 +185,7 @@ export default function DashboardLayout({
 
   // Check if current page should be fullscreen
   const isFullscreen = FULLSCREEN_PAGES.includes(pathname) || currentPage === 'kanban'
-  const isNationalArea = ['national-overview', 'national-governance', 'national-policies', 'national-api-keys', 'national-dashboard', 'master'].includes(currentPage)
+  const isNationalArea = isNationalPage(currentPage)
 
   // Large title visibility → controls compact topbar title + scroll state
   const largeTitleRef = useRef<HTMLDivElement>(null)
