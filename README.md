@@ -257,6 +257,45 @@ CRON_SECRET=
 
 ---
 
+## Docker
+
+```bash
+docker compose up -d
+```
+
+Buka http://localhost:3000. Tanpa kredensial apa pun, container langsung masuk
+**demo mode** — sama seperti `npm run dev`. Ganti port lewat `PORT=8080 docker compose up -d`.
+
+```bash
+docker compose logs -f      # ikuti log
+docker compose down         # hentikan
+```
+
+**Bentuk image.** Multi-stage: `deps` (install, di-cache selama lockfile tidak
+berubah) → `builder` (`npm run build`) → `runner`. Next dikonfigurasi
+`output: 'standalone'`, jadi runtime-nya server mandiri tanpa `node_modules`
+— image jadi **318MB**, berjalan sebagai user non-root (`nextjs`, uid 1001),
+dengan `node` sebagai PID 1 supaya SIGTERM diterima langsung dan container
+berhenti cepat.
+
+**Secret tidak ikut ke dalam image.** `.dockerignore` menyaring `.env*`;
+compose menyuntikkannya saat runtime lewat `env_file`. Terverifikasi: tidak ada
+file `.env` di image, dan string kunci tidak ditemukan di seluruh filesystem-nya.
+Artinya image yang sama aman didorong ke registry. `env_file` di-set
+`required: false`, jadi clone tanpa `.env` tetap jalan (masuk demo mode).
+
+**Healthcheck** menembak `/api/demo`, satu-satunya endpoint yang menjawab tanpa
+menyentuh database — jadi tetap sinyal liveness yang jujur baik di demo mode
+maupun dengan kredensial asli.
+
+> Compose ini hanya berisi service aplikasi. Supabase tidak ikut dijalankan
+> lokal: aplikasi bicara ke Supabase terkelola (PostgREST, GoTrue, dll), bukan
+> Postgres polos, jadi menaruh Postgres saja di sini akan menghasilkan stack
+> yang tidak berfungsi. Untuk pengembangan tanpa database, demo mode sudah
+> menutup kebutuhan itu.
+
+---
+
 ## Cara Lanjut Development
 
 ```bash

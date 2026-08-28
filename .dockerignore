@@ -1,0 +1,29 @@
+# Build inputs only — everything else bloats the context or leaks into layers.
+node_modules
+.next
+out
+build
+.git
+.gitignore
+.claude
+.vercel
+npm-debug.log*
+.DS_Store
+*.pem
+
+# Secrets never bake into the image. docker-compose injects them at runtime via
+# env_file, so the same image is safe to push to a registry.
+.env
+.env.*
+
+# Not needed to build or run the app.
+README.md
+docs
+supabase
+*.sql
+*.patch
+add-export-button.sh
+check-users.js
+import-*.js
+import_*.js
+update-*.js

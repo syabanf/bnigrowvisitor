@@ -1,0 +1,39 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bni-visitor:latest
+    container_name: bni-visitor
+    ports:
+      - "${PORT:-3000}:3000"
+    env_file:
+      # Optional on purpose: with no .env the app boots into demo mode, which is
+      # the whole point of `docker compose up` working on a fresh clone.
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      # Leave DEMO_MODE unset to let the app decide: it turns itself on exactly
+      # when the Supabase credentials are missing.
+      DEMO_MODE: ${DEMO_MODE:-}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      APP_BASE_DOMAIN: ${APP_BASE_DOMAIN:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
+      ELEVENLABS_MODEL_ID: ${ELEVENLABS_MODEL_ID:-}
+    restart: unless-stopped
+    healthcheck:
+      # /api/demo answers without touching the database, so it stays a true
+      # liveness signal in both demo and real-credential modes.
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/api/demo"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
