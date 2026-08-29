@@ -37,6 +37,7 @@ type Handlers struct {
 	Governance *handler.GovernanceHandler
 	Narration  *handler.NarrationHandler
 	Assistant  *handler.AssistantHandler
+	Demo       *handler.DemoHandler
 	External   *handler.ExternalHandler
 }
 
@@ -140,6 +141,10 @@ func NewRouter(
 		// session exists, and a visitor confirming attendance from a WhatsApp
 		// link has no account at all.
 		api.Get("/tenant-context", h.Tenant.Context)
+		// Public because the login screen needs it before a session exists.
+		// Returns 404 unless demo mode is on, so nothing here hints that a
+		// list of working accounts is one flag away.
+		api.Get("/demo-accounts", h.Demo.Accounts)
 		api.Post("/public/confirm/{token}", h.Public.Confirm)
 
 		// Everything below this line requires a valid session.

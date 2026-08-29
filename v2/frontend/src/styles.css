@@ -685,3 +685,15 @@ td select { min-width: 9rem; }
      roughly the lower half once the input has focus. */
   .assistant { max-height: min(26rem, calc(100vh - 12rem)); }
 }
+
+/* The signed-in person's name under the role. Muted and smaller: the role is
+   what you pick by, the name is what you recognise once the data loads. */
+.demo-card__who {
+  font-size: .75rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-card--busy { opacity: .6; }

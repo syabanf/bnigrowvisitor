@@ -184,3 +184,31 @@ func (r *UserRepository) ClearFailedLogins(ctx context.Context, id string) error
 		WHERE id = $1 AND (failed_login_count > 0 OR locked_until IS NOT NULL)`, id)
 	return err
 }
+
+// demoEmailSuffix is what marks a seeded account. A real deployment has no
+// users on this domain, so even with demo mode switched on by mistake this
+// returns nothing rather than the staff list.
+const demoEmailSuffix = "@demo.test"
+
+func (r *UserRepository) ListDemoAccounts(ctx context.Context) ([]domain.User, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id, name, email, role, chapter_id, organization_id, is_active
+		FROM users
+		WHERE is_active = true AND email LIKE '%' || $1
+		ORDER BY email`, demoEmailSuffix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	users := make([]domain.User, 0)
+	for rows.Next() {
+		var u domain.User
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &u.Role,
+			&u.ChapterID, &u.OrganizationID, &u.IsActive); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}

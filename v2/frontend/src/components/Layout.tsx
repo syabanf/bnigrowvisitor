@@ -11,6 +11,13 @@ interface NavItem {
   // Only the index route matches exactly; every other path would otherwise
   // stay highlighted for its own children.
   end?: boolean
+  // Roles that may see this link. Absent means everyone signed in.
+  //
+  // The API is the gate and refuses these regardless; this stops the nav from
+  // advertising a door that is locked. A PIC was being offered Akun and got a
+  // permission error for clicking it, which reads as the app being broken
+  // rather than as the boundary working.
+  roles?: string[]
 }
 
 const CHAPTER_NAV: NavItem[] = [
@@ -25,7 +32,7 @@ const CHAPTER_NAV: NavItem[] = [
   { to: '/text-format', label: 'Text Format', icon: 'clipboard' },
   { to: '/transfer', label: 'Export/Import', icon: 'download' },
   { to: '/activity', label: 'Log', icon: 'clock' },
-  { to: '/accounts', label: 'Akun', icon: 'settings' },
+  { to: '/accounts', label: 'Akun', icon: 'settings', roles: ['admin', 'national_admin', 'chapter_admin'] },
   { to: '/my-account', label: 'Profil', icon: 'user' },
 ]
 
@@ -45,7 +52,8 @@ export default function Layout() {
   const location = useLocation()
 
   const isNational = user?.role === 'national_admin' || user?.role === 'admin'
-  const nav = isNational ? [...CHAPTER_NAV, ...NATIONAL_NAV] : CHAPTER_NAV
+  const nav = (isNational ? [...CHAPTER_NAV, ...NATIONAL_NAV] : CHAPTER_NAV)
+    .filter(item => !item.roles || (user ? item.roles.includes(user.role) : false))
 
   // Navigating must close the drawer, or a phone lands on the new page with the
   // menu still covering it.

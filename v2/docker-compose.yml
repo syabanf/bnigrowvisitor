@@ -45,6 +45,11 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-deepseek-chat}
       ASSISTANT_NAME: ${ASSISTANT_NAME:-Grow Assistant}
+      # Quick sign-in on the login screen. This compose file is the demo and
+      # development stack, so it is on here; a real deployment leaves it unset,
+      # and the endpoint answers 404 rather than listing working credentials.
+      DEMO_MODE: ${DEMO_MODE:-true}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-demo123}
       # Pool size. Raise with the database, not with the traffic: measured at
       # 10, 25 and 50 under identical load, throughput did not improve.
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10}

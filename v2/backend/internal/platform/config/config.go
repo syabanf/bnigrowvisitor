@@ -42,6 +42,12 @@ type Config struct {
 	AIAPIKey      string
 	AIModel       string
 	AssistantName string
+
+	// DemoMode publishes the seeded accounts on the login screen. Off unless a
+	// deployment asks for it: handing out working credentials is right for a
+	// demo and wrong everywhere else, so it is never inferred from anything.
+	DemoMode     bool
+	DemoPassword string
 }
 
 func Load() (*Config, error) {
@@ -56,10 +62,14 @@ func Load() (*Config, error) {
 		ElevenLabsVoiceID: os.Getenv("ELEVENLABS_VOICE_ID"),
 		ElevenLabsModelID: env("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
 
-		AIBaseURL:      env("AI_BASE_URL", "https://api.deepseek.com"),
-		AIAPIKey:       os.Getenv("AI_API_KEY"),
-		AIModel:        env("AI_MODEL", "deepseek-chat"),
-		AssistantName:  env("ASSISTANT_NAME", "Grow Assistant"),
+		AIBaseURL:     env("AI_BASE_URL", "https://api.deepseek.com"),
+		AIAPIKey:      os.Getenv("AI_API_KEY"),
+		AIModel:       env("AI_MODEL", "deepseek-chat"),
+		AssistantName: env("ASSISTANT_NAME", "Grow Assistant"),
+
+		DemoMode:     env("DEMO_MODE", "false") == "true",
+		DemoPassword: env("DEMO_PASSWORD", "demo123"),
+
 		AllowedOrigins: splitOrigins(env("CORS_ORIGIN", "http://localhost:8095,http://localhost:5173")),
 	}
 

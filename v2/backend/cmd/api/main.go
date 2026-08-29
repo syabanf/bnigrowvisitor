@@ -94,6 +94,8 @@ func run(logger *slog.Logger) error {
 	)
 
 	secureCookies := cfg.Environment == "production"
+	demoUC := usecase.NewDemoUsecase(users, chapters, cfg.DemoMode, cfg.DemoPassword)
+
 	obs := metrics.New(pool)
 
 	router := nethttp.NewRouter(nethttp.Handlers{
@@ -114,6 +116,7 @@ func run(logger *slog.Logger) error {
 		Governance: handler.NewGovernanceHandler(governanceUC),
 		Narration:  handler.NewNarrationHandler(narrationUC),
 		Assistant:  handler.NewAssistantHandler(assistantUC),
+		Demo:       handler.NewDemoHandler(demoUC),
 		External:   handler.NewExternalHandler(members),
 	}, sessions, users, apiKeys, cfg.AllowedOrigins, obs, pool)
 

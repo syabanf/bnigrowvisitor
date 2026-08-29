@@ -16,6 +16,12 @@ type UserRepository interface {
 
 	// ListByScope powers the PIC picker and the account-management screen.
 	ListByScope(ctx context.Context, scope Scope, roles []Role) ([]User, error)
+
+	// ListDemoAccounts returns the seeded sign-in accounts, matched on the
+	// demo email domain. Only ever reached in demo mode, and matching on the
+	// domain rather than on a hardcoded list is what stops the login screen
+	// from offering an account that no longer exists.
+	ListDemoAccounts(ctx context.Context) ([]User, error)
 	Create(ctx context.Context, u *User) error
 	Update(ctx context.Context, u *User) error
 	SetActive(ctx context.Context, id string, active bool) error

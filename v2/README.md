@@ -519,6 +519,48 @@ dari menimpa database yang seharusnya ia lindungi.
 Terverifikasi utuh: 61 visitor, ditambah satu penanda jadi 62, restore dari dump
 yang diambil saat 61, hasilnya kembali 61 dengan penanda hilang.
 
+## Akun demo & masuk cepat
+
+```bash
+DEMO_MODE=true   # sudah on di compose ini; kosongkan untuk deployment sungguhan
+```
+
+`GET /api/demo-accounts` menerbitkan akun yang di-seed beserta passwordnya, dan
+layar login merendernya sebagai tombol masuk cepat. Mati secara default, dan
+saat mati endpoint-nya menjawab **404, bukan 403** — 403 akan mengonfirmasi
+bahwa daftar akun yang bisa dipakai hanya berjarak satu flag.
+
+Daftarnya dibaca dari database, bukan di-hardcode di UI. Versi sebelumnya
+ditulis tangan dan bisa menawarkan akun yang tidak ada lagi; yang ini berasal
+dari tempat yang sama dengan akunnya. Dicocokkan lewat domain `@demo.test`, jadi
+kalaupun demo mode tak sengaja menyala di produksi, yang keluar bukan daftar
+karyawan.
+
+Satu akun per peran-dan-chapter. Seed punya tiga PIC di BNI Grow supaya daftar
+visitor punya lebih dari satu pemilik, tapi menampilkan ketiganya di layar login
+hanya memperlihatkan tampilan yang sama tiga kali dan mengubur peran yang
+benar-benar berbeda.
+
+## Data seed
+
+Datanya dirapikan supaya layak dipamerkan. Sebelumnya:
+
+- Nama membawa nomor urut — "Dewi Lestari 26" — karena kumpulan 30 nama tidak
+  cukup untuk 56 baris tanpa bertabrakan.
+- `business_field` dan `company` diambil dari offset berbeda pada daftar yang
+  sama, jadi setiap pasangan janggal: asuransi jiwa di perusahaan logistik,
+  katering di percetakan.
+- Email dibangun dari nama bernomor itu, jadi tidak cocok dengan apa pun.
+
+Sekarang 30 nama depan x 12 nama keluarga memberi 360 kombinasi berbeda,
+diurutkan lewat hash dari kedua indeksnya supaya nama depan dan belakang
+tercampur — tanpa itu tiga puluh orang pertama semuanya bermarga Santoso.
+Deterministik: database baru menghasilkan nama yang sama, yang penting karena
+quick tour dan tangkapan layar merujuk ke mereka.
+
+Ditulis sebagai UPDATE, bukan seed ulang: barisnya direferensikan meeting, log
+aktivitas, dan entri audit, dan menggantinya akan membuat semua itu menggantung.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres
