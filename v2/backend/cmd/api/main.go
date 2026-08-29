@@ -19,6 +19,7 @@ import (
 	"bni-visitor/internal/platform/database"
 	"bni-visitor/internal/platform/llm"
 	"bni-visitor/internal/platform/maintenance"
+	"bni-visitor/internal/platform/metrics"
 	"bni-visitor/internal/platform/session"
 	"bni-visitor/internal/repository/postgres"
 	"bni-visitor/internal/usecase"
@@ -93,6 +94,8 @@ func run(logger *slog.Logger) error {
 	)
 
 	secureCookies := cfg.Environment == "production"
+	obs := metrics.New(pool)
+
 	router := nethttp.NewRouter(nethttp.Handlers{
 		Auth:       handler.NewAuthHandler(authUC, sessions, secureCookies),
 		Visitor:    handler.NewVisitorHandler(visitorUC),
@@ -112,7 +115,7 @@ func run(logger *slog.Logger) error {
 		Narration:  handler.NewNarrationHandler(narrationUC),
 		Assistant:  handler.NewAssistantHandler(assistantUC),
 		External:   handler.NewExternalHandler(members),
-	}, sessions, users, apiKeys, cfg.AllowedOrigins)
+	}, sessions, users, apiKeys, cfg.AllowedOrigins, obs, pool)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

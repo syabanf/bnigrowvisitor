@@ -1,6 +1,10 @@
 package http
 
 import (
+	"bni-visitor/internal/platform/metrics"
+	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -16,19 +20,19 @@ import (
 )
 
 type Handlers struct {
-	Auth      *handler.AuthHandler
-	Visitor   *handler.VisitorHandler
-	Chapter   *handler.ChapterHandler
-	Member    *handler.MemberHandler
-	Guest     *handler.GuestHandler
-	Dashboard *handler.DashboardHandler
-	Account   *handler.AccountHandler
-	Meeting   *handler.MeetingHandler
-	MCQA      *handler.MCQAHandler
-	Messaging *handler.MessagingHandler
-	Transfer  *handler.TransferHandler
-	Tenant    *handler.TenantHandler
-	Activity  *handler.ActivityHandler
+	Auth       *handler.AuthHandler
+	Visitor    *handler.VisitorHandler
+	Chapter    *handler.ChapterHandler
+	Member     *handler.MemberHandler
+	Guest      *handler.GuestHandler
+	Dashboard  *handler.DashboardHandler
+	Account    *handler.AccountHandler
+	Meeting    *handler.MeetingHandler
+	MCQA       *handler.MCQAHandler
+	Messaging  *handler.MessagingHandler
+	Transfer   *handler.TransferHandler
+	Tenant     *handler.TenantHandler
+	Activity   *handler.ActivityHandler
 	Public     *handler.PublicHandler
 	Governance *handler.GovernanceHandler
 	Narration  *handler.NarrationHandler
@@ -42,6 +46,8 @@ func NewRouter(
 	validator domain.SessionValidator,
 	apiKeys domain.APIKeyRepository,
 	allowedOrigins []string,
+	obs *metrics.Registry,
+	pool *pgxpool.Pool,
 ) http.Handler {
 	r := chi.NewRouter()
 
@@ -50,6 +56,10 @@ func NewRouter(
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(middleware.SecurityHeaders)
+	// After the router has matched, so the route pattern is available to label
+	// by; before the handlers, so a request that fails inside one is still
+	// counted.
+	r.Use(obs.Middleware)
 
 	// Credentials are required because auth rides on a cookie, and a wildcard
 	// origin is invalid in that mode — the allowlist has to be explicit.
@@ -61,9 +71,37 @@ func NewRouter(
 		MaxAge:           300,
 	}))
 
+	// Liveness: the process is running and can serve. Deliberately does not
+	// touch the database — a restart cannot fix an unreachable database, and a
+	// liveness probe that fails on it turns a database blip into a restart loop
+	// that makes the outage worse.
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		handler.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+
+	// Readiness: this instance can actually do work. It pings the database,
+	// because an instance that cannot reach it should be taken out of rotation
+	// rather than accepting requests it will fail. /health answered "ok"
+	// regardless, which is exactly the state an orchestrator most needs to
+	// distinguish.
+	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := pool.Ping(ctx); err != nil {
+			// The reason is logged, not returned: a probe endpoint is
+			// unauthenticated, and connection errors carry host names.
+			slog.Error("readiness gagal", "err", err)
+			handler.WriteJSON(w, http.StatusServiceUnavailable,
+				map[string]string{"status": "database tidak siap"})
+			return
+		}
+		handler.WriteJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+	})
+
+	// Metrics. Not proxied by nginx, so it is reachable only from inside the
+	// network: route names and traffic shape are useful to anyone sizing up a
+	// service, and there is no reason for them to leave it.
+	r.Handle("/metrics", obs.Handler())
 
 	// Machine-facing API, mounted outside /api so no browser-oriented middleware
 	// applies to it. It authenticates with a key rather than a cookie, so the

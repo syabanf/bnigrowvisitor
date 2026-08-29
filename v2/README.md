@@ -451,6 +451,74 @@ kalimat yang menyuruh model. Batas sebenarnya bukan kalimat itu: asisten ini
 tidak punya tool sama sekali, jadi kasus terburuknya adalah jawaban yang salah,
 bukan tindakan yang salah.
 
+## Observability
+
+```
+GET /health    liveness   — proses hidup, TIDAK menyentuh database
+GET /ready     readiness  — ping database, 503 kalau tidak siap
+GET /metrics   Prometheus — hanya dari dalam network
+```
+
+`/health` sengaja tidak menyentuh database. Restart tidak memperbaiki database
+yang tidak terjangkau, dan liveness probe yang gagal karenanya mengubah gangguan
+sesaat jadi restart loop yang memperburuk keadaan. Yang perlu tahu database
+tidak siap adalah readiness — supaya instance-nya dikeluarkan dari rotasi, bukan
+dibunuh. Sebelumnya hanya ada `/health` yang selalu menjawab "ok".
+
+`/metrics` tidak di-proxy nginx, jadi hanya terjangkau dari dalam network: nama
+rute dan bentuk trafik berguna bagi siapa pun yang sedang mengukur sebuah
+layanan.
+
+Labelnya memakai **pola rute**, bukan path mentah. `/api/visitors/{id}` adalah
+satu time series; memakai path-nya akan mencetak satu series baru per visitor
+dan pada akhirnya menjatuhkan penyimpanan metriknya sendiri.
+
+Selain metrik HTTP, pool koneksi dilaporkan saat scrape — termasuk
+`db_pool_acquire_wait_seconds_total`, angka yang paling layak di-alert: menunggu
+koneksi adalah antrean yang tidak muncul di timing kueri mana pun.
+
+## Backup
+
+```bash
+docker compose --profile backup up -d backup   # default: harian, simpan 14 hari
+```
+
+Di balik profil karena loop dump adalah kebisingan saat development, dan karena
+di mana backup disimpan itu keputusan deployment.
+
+Memakai image postgres yang sama dengan server, supaya versi `pg_dump` cocok —
+klien yang lebih tua bisa menghasilkan dump yang gagal di-restore, dan insiden
+adalah waktu terburuk untuk mengetahuinya.
+
+Dump ditulis dengan nama sementara lalu di-*rename* setelah berhasil. Dump yang
+terpotong di tengah akan terlihat persis seperti yang utuh, dan justru jadi yang
+terbaru saat restore.
+
+Pruning tidak pernah menghapus sampai habis. Kalau job-nya berhenti sebulan dan
+semua backup melewati jendela retensi, menghapus semuanya berarti tidak ada
+titik pulih sama sekali — lebih buruk daripada menyimpan yang basi.
+
+### Restore, dan satu jebakannya
+
+```bash
+docker compose stop api
+docker compose run --rm backup /ops/restore.sh
+docker compose start api
+```
+
+**Hentikan API dulu.** Dump-nya men-drop dan membuat ulang semua tabel,
+sementara koneksi pool API memegang prepared statement ke tabel yang lama.
+Restore di bawah API yang hidup meninggalkan keadaan di mana login masih
+berhasil tapi request berikutnya 401 — terbaca sebagai bug perizinan, bukan
+sebagai restore yang menyebabkannya. Ini teramati, bukan teori.
+
+Restore terpisah dari loop backup dengan sengaja: restore itu destruktif, dan
+job backup yang juga bisa me-restore hanya berjarak satu environment variable
+dari menimpa database yang seharusnya ia lindungi.
+
+Terverifikasi utuh: 61 visitor, ditambah satu penanda jadi 62, restore dari dump
+yang diambil saat 61, hasilnya kembali 61 dengan penanda hilang.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres
@@ -472,4 +540,4 @@ Fitur sudah setara dengan aplikasi Next.js. Yang belum:
       awan); keputusan dependensinya belum diambil
 - [x] **Import/export Excel (.xlsx)** — format dikenali dari isi file, bukan
       ekstensinya
-- [ ] **Backup terjadwal & observability** — keputusan deployment
+- [x] **Backup terjadwal & observability** — keduanya di balik profil compose
