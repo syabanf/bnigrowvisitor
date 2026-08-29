@@ -92,20 +92,39 @@ type ImportError struct {
 	Reason string `json:"reason"`
 }
 
-// ImportVisitors reads the same CSV shape ExportVisitors writes.
+// ImportVisitors accepts either the CSV that ExportVisitors writes or an .xlsx
+// workbook, deciding from the bytes rather than the filename.
+//
+// Auto-detection rather than two endpoints or a format field: people export
+// from Excel, from Google Sheets, from this app, and rename files. A wrong
+// extension should not be a failed import when the content says exactly what it
+// is.
 func (uc *TransferUsecase) ImportVisitors(ctx context.Context, scope domain.Scope, actor Actor, r io.Reader) (*ImportResult, error) {
 	chapterID, err := resolveChapter(ctx, uc.chapters, scope, "")
 	if err != nil {
 		return nil, err
 	}
 
-	reader := csv.NewReader(stripBOM(r))
-	reader.FieldsPerRecord = -1 // tolerate short rows; each field is checked below
-	reader.TrimLeadingSpace = true
-
-	header, err := reader.Read()
+	rows, err := readRows(r)
 	if err != nil {
-		return nil, fmt.Errorf("%w: file kosong atau bukan CSV", domain.ErrValidation)
+		return nil, err
+	}
+	return uc.applyRows(ctx, chapterID, actor, rows)
+}
+
+// rowSource yields the header once and then each data row. Both formats reduce
+// to this, so the validation below is written once — the alternative was a
+// second copy of it that would drift the first time a rule changed.
+type rowSource interface {
+	// Next returns the next row, or io.EOF. A malformed row returns an error
+	// other than io.EOF and is skipped rather than ending the import.
+	Next() ([]string, error)
+}
+
+func (uc *TransferUsecase) applyRows(ctx context.Context, chapterID string, actor Actor, src rowSource) (*ImportResult, error) {
+	header, err := src.Next()
+	if err != nil {
+		return nil, fmt.Errorf("%w: file kosong atau formatnya tidak dikenali", domain.ErrValidation)
 	}
 	index := columnIndex(header)
 	if _, ok := index["nama"]; !ok {
@@ -116,7 +135,7 @@ func (uc *TransferUsecase) ImportVisitors(ctx context.Context, scope domain.Scop
 	row := 1
 
 	for {
-		record, err := reader.Read()
+		record, err := src.Next()
 		if err == io.EOF {
 			break
 		}
@@ -124,6 +143,12 @@ func (uc *TransferUsecase) ImportVisitors(ctx context.Context, scope domain.Scop
 		if err != nil {
 			result.Skipped++
 			result.Errors = append(result.Errors, ImportError{Row: row, Reason: "baris tidak terbaca"})
+			continue
+		}
+		if isBlankRow(record) {
+			// A spreadsheet carries trailing empty rows from any cell someone
+			// once touched. Counting those as failures would report dozens of
+			// errors for a file that imported perfectly.
 			continue
 		}
 
@@ -200,8 +225,8 @@ func stripBOM(r io.Reader) io.Reader {
 }
 
 // ExportFilename gives the download a name that says what and when.
-func ExportFilename(prefix string, now time.Time) string {
-	return fmt.Sprintf("%s-%s.csv", prefix, now.Format("2006-01-02"))
+func ExportFilename(prefix string, now time.Time, ext string) string {
+	return fmt.Sprintf("%s-%s.%s", prefix, now.Format("2006-01-02"), ext)
 }
 
 func actorPtr(id string) *string {

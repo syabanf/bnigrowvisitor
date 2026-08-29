@@ -23,15 +23,32 @@ func (h *TransferHandler) ExportVisitors(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	filename := usecase.ExportFilename("visitors", time.Now())
+	filter := domain.VisitorFilter{
+		Status: q.Get("status"), MeetingID: q.Get("meetingId"), Search: q.Get("q"),
+	}
+
+	// The export honours the filters the caller is looking at. Exporting the
+	// whole chapter regardless of the active filter is a common enough default
+	// that it is worth saying it is not what happens here.
+	if q.Get("format") == "xlsx" {
+		filename := usecase.ExportFilename("visitors", time.Now(), "xlsx")
+		w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		// Unlike the CSV path this builds the workbook before writing a byte,
+		// so a failure here still has a status code to return.
+		if err := h.transfer.ExportVisitorsXLSX(r.Context(), scope, filter, w); err != nil {
+			WriteError(w, err)
+		}
+		return
+	}
+
+	filename := usecase.ExportFilename("visitors", time.Now(), "csv")
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
 	// Headers are already committed once streaming starts, so a mid-stream
 	// failure can only be logged — there is no status code left to change.
-	if err := h.transfer.ExportVisitors(r.Context(), scope, domain.VisitorFilter{
-		Status: q.Get("status"), MeetingID: q.Get("meetingId"), Search: q.Get("q"),
-	}, w); err != nil {
+	if err := h.transfer.ExportVisitors(r.Context(), scope, filter, w); err != nil {
 		WriteError(w, err)
 	}
 }
@@ -52,7 +69,7 @@ func (h *TransferHandler) ImportVisitors(w http.ResponseWriter, r *http.Request)
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		WriteError(w, fmt.Errorf("%w: file CSV wajib diunggah", domain.ErrValidation))
+		WriteError(w, fmt.Errorf("%w: file CSV atau Excel wajib diunggah", domain.ErrValidation))
 		return
 	}
 	defer file.Close()

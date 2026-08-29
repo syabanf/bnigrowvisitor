@@ -402,6 +402,24 @@ indeksnya tidak pernah disentuh.
 statement dikirim tanpa nama dan Postgres selalu merencanakan ulang terhadap
 pola yang sebenarnya. Setelah itu pencarian dan list sama cepat.
 
+## Export & import
+
+Export menulis kolom yang sama untuk kedua format, jadi hasil unduhan bisa
+langsung diimpor kembali. CSV membawa BOM UTF-8 supaya Excel di locale Indonesia
+tidak membaca file sebagai codepage sistem dan merusak huruf beraksen.
+
+Format saat impor dikenali dari **isi** file — empat byte pertama sebuah `.xlsx`
+adalah magic zip — bukan dari ekstensinya. Orang mengekspor dari Excel, dari
+Google Sheets, dan mengganti nama file; ekstensi yang salah tidak seharusnya
+menggagalkan impor ketika isinya sudah menyatakan dirinya sendiri.
+
+Kedua format melewati satu jalur validasi yang sama (`rowSource`). Menyalinnya
+jadi dua akan membuat aturannya melenceng pada perubahan pertama.
+
+Baris kosong dilewati diam-diam. Spreadsheet mengumpulkan baris kosong di bawah
+dari sel mana pun yang pernah disentuh; menghitungnya sebagai kegagalan akan
+melaporkan puluhan error untuk file yang sebenarnya masuk sempurna.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres
@@ -417,11 +435,10 @@ Fitur sudah setara dengan aplikasi Next.js. Yang belum:
 
 - [ ] **Asisten AI** — butuh kunci penyedia; sengaja tidak dibuat agar tidak ada
       kunci yang ikut ter-commit lagi
-- [ ] **Quick tour bernarasi** — v1 memakai ElevenLabs; jalur yang sama akan
-      mengulang masalah kunci publik, jadi ditunda sampai kuncinya dikelola
-      lewat secret manager
+- [x] **Quick tour bernarasi** — ElevenLabs di sisi server, dengan fallback
+      Web Speech; kuncinya lewat environment, tidak ikut ter-commit
 - [ ] **OCR** input visitor dari foto — butuh mesin OCR (Tesseract atau layanan
       awan); keputusan dependensinya belum diambil
-- [ ] **Import Excel (.xlsx)** — yang ada baru CSV
-- [ ] **HTTPS/TLS, backup terjadwal, observability** — semuanya keputusan
-      deployment, belum ada di compose
+- [x] **Import/export Excel (.xlsx)** — format dikenali dari isi file, bukan
+      ekstensinya
+- [ ] **Backup terjadwal & observability** — keputusan deployment

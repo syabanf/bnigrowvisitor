@@ -537,3 +537,7 @@ td select { min-width: 9rem; }
   outline: 2px solid var(--red);
   outline-offset: 2px;
 }
+
+/* A row of buttons that wraps instead of overflowing on a narrow screen. */
+.btn-row { display: flex; flex-wrap: wrap; gap: .5rem; }
+.btn-row .btn { display: inline-flex; align-items: center; gap: .4rem; }

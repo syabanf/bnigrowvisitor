@@ -63,7 +63,10 @@ func TestColumnIndexAndField(t *testing.T) {
 
 func TestExportFilename(t *testing.T) {
 	at := time.Date(2026, 8, 28, 15, 0, 0, 0, time.UTC)
-	if got := ExportFilename("visitors", at); got != "visitors-2026-08-28.csv" {
-		t.Errorf("ExportFilename = %q", got)
+	if got := ExportFilename("visitors", at, "csv"); got != "visitors-2026-08-28.csv" {
+		t.Errorf("ExportFilename csv = %q", got)
+	}
+	if got := ExportFilename("visitors", at, "xlsx"); got != "visitors-2026-08-28.xlsx" {
+		t.Errorf("ExportFilename xlsx = %q", got)
 	}
 }
