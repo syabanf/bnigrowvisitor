@@ -36,6 +36,15 @@ services:
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-}
       ELEVENLABS_MODEL_ID: ${ELEVENLABS_MODEL_ID:-}
+      # The AI assistant. Optional: without a key it answers from the figures
+      # rather than refusing, so leaving these unset degrades the feature
+      # instead of breaking it. The base URL is a variable because the
+      # chat-completions shape is shared — DeepSeek, OpenAI, Groq, a local
+      # server — and which one an operator can reach is not a code decision.
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek-chat}
+      ASSISTANT_NAME: ${ASSISTANT_NAME:-Grow Assistant}
       # Pool size. Raise with the database, not with the traffic: measured at
       # 10, 25 and 50 under identical load, throughput did not improve.
       DB_MAX_CONNS: ${DB_MAX_CONNS:-10}

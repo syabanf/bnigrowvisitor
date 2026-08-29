@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Icon, { type IconName } from './Icon'
+import Assistant from './Assistant'
 
 interface NavItem {
   to: string
@@ -129,6 +130,8 @@ export default function Layout() {
         <main className="content">
           <Outlet />
         </main>
+
+        <Assistant />
       </div>
     </div>
   )

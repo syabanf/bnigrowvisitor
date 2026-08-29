@@ -420,6 +420,37 @@ Baris kosong dilewati diam-diam. Spreadsheet mengumpulkan baris kosong di bawah
 dari sel mana pun yang pernah disentuh; menghitungnya sebagai kegagalan akan
 melaporkan puluhan error untuk file yang sebenarnya masuk sempurna.
 
+## Asisten
+
+Menjawab pertanyaan tentang data chapter yang sedang dilihat. Konteksnya disusun
+di server dari scope yang sudah diselesaikan, tidak pernah dari apa pun yang
+dikirim browser — asisten milik pengguna chapter tidak boleh bisa menceritakan
+chapter lain, dan caranya adalah angka chapter lain tidak pernah masuk ke prompt.
+Terverifikasi lewat tes: pengguna chapter yang secara eksplisit meminta
+perbandingan mendapat penolakan, bukan data tetangganya.
+
+**Tanpa kunci pun tetap jalan.** v1 mengembalikan 500 ketika `DEEPSEEK_API_KEY`
+kosong, yang membuat asistennya tidak berguna di deployment mana pun tanpa
+kunci. Di sini, tanpa penyedia ia menjawab dari angka dashboard — follow up,
+konversi, kehadiran, member, sebaran status, ringkasan — dan mengatakan apa
+adanya bahwa tidak ada model di belakangnya. Penyedia yang mati atau salah
+konfigurasi juga jatuh ke sana, dengan peringatan di UI dan alasan aslinya di
+log server, bukan di browser.
+
+Endpoint-nya OpenAI chat-completions, jadi penyedia adalah `AI_BASE_URL` +
+`AI_MODEL`, bukan keputusan kode. v1 memanggil DeepSeek langsung dan tidak bisa
+diarahkan ke mana pun.
+
+Yang dikirim ke penyedia sengaja sempit: agregat, dan daftar kerja pendek berisi
+nama serta status. Nomor telepon, email, dan catatan tidak ikut — data pribadi
+yang tidak dibutuhkan untuk menjawab pertanyaannya.
+
+Isi data ditandai sebagai data, bukan perintah, di dalam prompt. Nama dan catatan
+ditulis oleh pengguna aplikasi, jadi seseorang bisa saja menamai visitor dengan
+kalimat yang menyuruh model. Batas sebenarnya bukan kalimat itu: asisten ini
+tidak punya tool sama sekali, jadi kasus terburuknya adalah jawaban yang salah,
+bukan tindakan yang salah.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres
@@ -433,8 +464,8 @@ build yang membutuhkan Supabase hidup untuk bisa dikompilasi adalah regresi.
 
 Fitur sudah setara dengan aplikasi Next.js. Yang belum:
 
-- [ ] **Asisten AI** — butuh kunci penyedia; sengaja tidak dibuat agar tidak ada
-      kunci yang ikut ter-commit lagi
+- [x] **Asisten AI** — endpoint OpenAI-compatible lewat environment; tanpa kunci
+      ia menjawab dari angka, bukan menolak
 - [x] **Quick tour bernarasi** — ElevenLabs di sisi server, dengan fallback
       Web Speech; kuncinya lewat environment, tidak ikut ter-commit
 - [ ] **OCR** input visitor dari foto — butuh mesin OCR (Tesseract atau layanan

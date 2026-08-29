@@ -52,6 +52,42 @@ func (s VisitorStatus) Valid() bool {
 	return ok
 }
 
+// orderedStatuses is the pipeline in the order it actually happens. A map has
+// no order, so anything that walks the statuses for display or for a summary
+// needs this — otherwise the same list comes out shuffled on every run.
+var orderedStatuses = []VisitorStatus{
+	StatusNew, StatusFollowUp, StatusConfirmed, StatusAttended,
+	StatusNoShow, StatusInterview, StatusMember, StatusNotContinue,
+}
+
+func AllVisitorStatuses() []VisitorStatus {
+	// Copied, so a caller ranging over it cannot reorder the source.
+	out := make([]VisitorStatus, len(orderedStatuses))
+	copy(out, orderedStatuses)
+	return out
+}
+
+var statusLabels = map[VisitorStatus]string{
+	StatusNew:         "Baru Daftar",
+	StatusFollowUp:    "Follow Up",
+	StatusConfirmed:   "Konfirmasi Hadir",
+	StatusAttended:    "Hadir",
+	StatusNoShow:      "Tidak Hadir",
+	StatusInterview:   "Interview",
+	StatusMember:      "Jadi Member",
+	StatusNotContinue: "Tidak Lanjut",
+}
+
+// StatusLabel is the human name for a status. Unknown values return themselves
+// rather than an empty string, so a value added to the database but not here is
+// visible rather than silently blank.
+func StatusLabel(s VisitorStatus) string {
+	if label, ok := statusLabels[s]; ok {
+		return label
+	}
+	return string(s)
+}
+
 type Organization struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`

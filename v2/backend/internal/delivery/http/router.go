@@ -32,6 +32,7 @@ type Handlers struct {
 	Public     *handler.PublicHandler
 	Governance *handler.GovernanceHandler
 	Narration  *handler.NarrationHandler
+	Assistant  *handler.AssistantHandler
 	External   *handler.ExternalHandler
 }
 
@@ -185,6 +186,16 @@ func NewRouter(
 			})
 
 			private.Get("/governance/logins", h.Governance.Logins)
+
+			private.Get("/assistant/status", h.Assistant.Status)
+			// Throttled like narration and for the same reason: every question
+			// spends provider credits, so a stuck client must not drain the
+			// account. Tighter than narration because one answer costs more
+			// than one line of speech.
+			private.Group(func(a chi.Router) {
+				a.Use(httprate.LimitByIP(20, time.Minute))
+				a.Post("/assistant", h.Assistant.Ask)
+			})
 
 			private.Get("/narration/status", h.Narration.Status)
 			// Throttled separately from login: every call spends provider

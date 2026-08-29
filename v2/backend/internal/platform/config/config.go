@@ -30,6 +30,18 @@ type Config struct {
 	ElevenLabsKey     string
 	ElevenLabsVoiceID string
 	ElevenLabsModelID string
+
+	// The AI assistant. Also optional, and for the same reason: with no key it
+	// answers from the figures instead of refusing, so a deployment without a
+	// provider still has a working assistant rather than a broken button.
+	//
+	// A base URL rather than a hardcoded vendor — DeepSeek, OpenAI, Groq,
+	// OpenRouter and most self-hosted servers speak the same chat-completions
+	// shape, and which one an operator can use is not a code decision.
+	AIBaseURL     string
+	AIAPIKey      string
+	AIModel       string
+	AssistantName string
 }
 
 func Load() (*Config, error) {
@@ -43,6 +55,11 @@ func Load() (*Config, error) {
 		ElevenLabsKey:     os.Getenv("ELEVENLABS_API_KEY"),
 		ElevenLabsVoiceID: os.Getenv("ELEVENLABS_VOICE_ID"),
 		ElevenLabsModelID: env("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
+
+		AIBaseURL:      env("AI_BASE_URL", "https://api.deepseek.com"),
+		AIAPIKey:       os.Getenv("AI_API_KEY"),
+		AIModel:        env("AI_MODEL", "deepseek-chat"),
+		AssistantName:  env("ASSISTANT_NAME", "Grow Assistant"),
 		AllowedOrigins: splitOrigins(env("CORS_ORIGIN", "http://localhost:8095,http://localhost:5173")),
 	}
 
@@ -66,10 +83,10 @@ func Load() (*Config, error) {
 // often than anyone admits, and a predictable signing key means anyone can mint
 // a valid admin cookie. Refusing to start is the only reliable guard.
 var wellKnownSecrets = map[string]struct{}{
-	"dev-only-secret-change-me": {},
-	"changeme":                  {},
-	"secret":                    {},
-	"development":               {},
+	"dev-only-secret-change-me":       {},
+	"changeme":                        {},
+	"secret":                          {},
+	"development":                     {},
 	"bni-visitor-demo-session-secret": {},
 }
 

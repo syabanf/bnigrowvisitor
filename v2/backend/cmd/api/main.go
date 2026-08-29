@@ -17,6 +17,7 @@ import (
 	"bni-visitor/internal/delivery/http/handler"
 	"bni-visitor/internal/platform/config"
 	"bni-visitor/internal/platform/database"
+	"bni-visitor/internal/platform/llm"
 	"bni-visitor/internal/platform/maintenance"
 	"bni-visitor/internal/platform/session"
 	"bni-visitor/internal/repository/postgres"
@@ -86,25 +87,30 @@ func run(logger *slog.Logger) error {
 	transferUC := usecase.NewTransferUsecase(visitors, members, chapters)
 	governanceUC := usecase.NewGovernanceUsecase(master, policies, apiKeys, governance)
 	narrationUC := usecase.NewNarrationUsecase(cfg.ElevenLabsKey, cfg.ElevenLabsVoiceID, cfg.ElevenLabsModelID)
+	assistantUC := usecase.NewAssistantUsecase(
+		llm.New(cfg.AIBaseURL, cfg.AIAPIKey, cfg.AIModel),
+		stats, visitors, members, cfg.AssistantName,
+	)
 
 	secureCookies := cfg.Environment == "production"
 	router := nethttp.NewRouter(nethttp.Handlers{
-		Auth:      handler.NewAuthHandler(authUC, sessions, secureCookies),
-		Visitor:   handler.NewVisitorHandler(visitorUC),
-		Chapter:   handler.NewChapterHandler(chapters, meetings),
-		Member:    handler.NewMemberHandler(memberUC),
-		Guest:     handler.NewGuestHandler(guestUC),
-		Dashboard: handler.NewDashboardHandler(dashboardUC),
-		Account:   handler.NewAccountHandler(accountUC),
-		Meeting:   handler.NewMeetingHandler(meetings, chapters),
-		MCQA:      handler.NewMCQAHandler(visitorUC),
-		Messaging: handler.NewMessagingHandler(messagingUC),
-		Transfer:  handler.NewTransferHandler(transferUC),
-		Tenant:    handler.NewTenantHandler(tenantUC),
-		Activity:  handler.NewActivityHandler(activity),
+		Auth:       handler.NewAuthHandler(authUC, sessions, secureCookies),
+		Visitor:    handler.NewVisitorHandler(visitorUC),
+		Chapter:    handler.NewChapterHandler(chapters, meetings),
+		Member:     handler.NewMemberHandler(memberUC),
+		Guest:      handler.NewGuestHandler(guestUC),
+		Dashboard:  handler.NewDashboardHandler(dashboardUC),
+		Account:    handler.NewAccountHandler(accountUC),
+		Meeting:    handler.NewMeetingHandler(meetings, chapters),
+		MCQA:       handler.NewMCQAHandler(visitorUC),
+		Messaging:  handler.NewMessagingHandler(messagingUC),
+		Transfer:   handler.NewTransferHandler(transferUC),
+		Tenant:     handler.NewTenantHandler(tenantUC),
+		Activity:   handler.NewActivityHandler(activity),
 		Public:     handler.NewPublicHandler(visitorUC),
 		Governance: handler.NewGovernanceHandler(governanceUC),
 		Narration:  handler.NewNarrationHandler(narrationUC),
+		Assistant:  handler.NewAssistantHandler(assistantUC),
 		External:   handler.NewExternalHandler(members),
 	}, sessions, users, apiKeys, cfg.AllowedOrigins)
 
