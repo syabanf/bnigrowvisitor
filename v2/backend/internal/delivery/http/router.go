@@ -47,6 +47,7 @@ func NewRouter(
 	validator domain.SessionValidator,
 	apiKeys domain.APIKeyRepository,
 	allowedOrigins []string,
+	environment string,
 	obs *metrics.Registry,
 	pool *pgxpool.Pool,
 ) http.Handler {
@@ -119,7 +120,7 @@ func NewRouter(
 	})
 
 	r.Route("/api", func(api chi.Router) {
-		api.Use(middleware.RequireSameOrigin(allowedOrigins))
+		api.Use(middleware.RequireSameOrigin(allowedOrigins, environment))
 		api.Use(middleware.LimitBody(middleware.DefaultMaxBody))
 
 		// A ceiling across the whole API, well above what a person clicking

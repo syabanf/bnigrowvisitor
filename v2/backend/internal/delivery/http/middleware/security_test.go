@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -35,7 +36,7 @@ func TestSecurityHeaders(t *testing.T) {
 
 func TestRequireSameOrigin(t *testing.T) {
 	allowed := []string{"http://localhost:8095", "http://localhost:5173"}
-	guard := RequireSameOrigin(allowed)(okHandler())
+	guard := RequireSameOrigin(allowed, "development")(okHandler())
 
 	tests := []struct {
 		name       string
@@ -102,5 +103,28 @@ func TestOriginOf(t *testing.T) {
 		if got := originOf(tc.in); got != tc.want {
 			t.Errorf("originOf(%q) = %q, want %q", tc.in, got, tc.want)
 		}
+	}
+}
+
+// The message a rejected browser sees. This check blocks real users far more
+// often than attackers — a deployment reached on a hostname nobody added to
+// CORS_ORIGIN cannot log in at all — so outside production it has to say which
+// origin was refused and where to fix it, not just that something was refused.
+func TestRejectedOriginMessageIsActionableOutsideProduction(t *testing.T) {
+	allowed := []string{"http://localhost:8095"}
+
+	dev := rejectionMessage("http://bni-vh.example.id", allowed, "development")
+	if !strings.Contains(dev, "http://bni-vh.example.id") {
+		t.Errorf("pesan development harus menyebut origin yang ditolak: %q", dev)
+	}
+	if !strings.Contains(dev, "CORS_ORIGIN") {
+		t.Errorf("pesan development harus menyebut knob yang memperbaikinya: %q", dev)
+	}
+
+	// In production it stays terse: the allowlist is configuration, and the
+	// caller already knows their own origin, so naming it buys nothing there.
+	prod := rejectionMessage("http://bni-vh.example.id", allowed, "production")
+	if strings.Contains(prod, "CORS_ORIGIN") || strings.Contains(prod, "localhost:8095") {
+		t.Errorf("pesan production tidak boleh membocorkan konfigurasi: %q", prod)
 	}
 }

@@ -1,6 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import { useAuth } from '../auth'
+import Icon, { type IconName } from '../components/Icon'
+
+// One icon per role, so the quick sign-in list is scannable by shape before it
+// is read. Anything unmapped falls back to a person.
+const ROLE_ICON: Record<string, IconName> = {
+  admin: 'shield',
+  national_admin: 'map',
+  chapter_admin: 'settings',
+  pic: 'users',
+  member: 'user',
+}
 
 interface TenantContext {
   matched: boolean
@@ -29,6 +40,9 @@ export default function Login() {
   const [busy, setBusy] = useState('')
   const [tenant, setTenant] = useState<TenantContext | null>(null)
   const [demo, setDemo] = useState<DemoAccounts | null>(null)
+  // Typing a password blind is the most common cause of a failed sign-in, and
+  // this screen has no "forgot password" to fall back on.
+  const [reveal, setReveal] = useState(false)
 
   // Branding comes from the host, so the login screen shows the right chapter
   // before anyone has signed in. An unmatched host is the national entry point,
@@ -60,19 +74,46 @@ export default function Login() {
     void submit(email, password)
   }
 
+  const heading = tenant?.matched ? tenant.display_name : 'BNI Visitor'
+  const place = [tenant?.chapter?.city_name, tenant?.chapter?.area_name]
+    .filter(Boolean).join(' · ')
+
   return (
     <div className="login">
-      <div className="login__card">
-        <h1>{tenant?.matched ? tenant.display_name : 'BNI Visitor'}</h1>
-        <p className="muted">
-          {tenant?.matched && tenant.chapter?.city_name
-            ? `${tenant.chapter.city_name} · masuk untuk melanjutkan`
-            : 'Masuk untuk melanjutkan'}
+      {/* Identity first, and on its own side of the screen. On a per-chapter
+          subdomain the thing worth confirming before typing a password is that
+          you are on the right chapter — a centred card names it in passing. */}
+      <aside className="login__brand">
+        <div className="login__mark"><Icon name="building" size={1.4} /></div>
+        {/* Wrapped so the compact mobile header can lay the mark beside the
+            text without the name and the place competing for the same row. */}
+        <div className="login__ident">
+          <h1 className="login__title">{heading}</h1>
+          {place && <p className="login__place">{place}</p>}
+        </div>
+        <p className="login__pitch">
+          Kelola visitor, member, meeting, dan follow-up chapter dalam satu tempat.
         </p>
+        <ul className="login__points">
+          <li><Icon name="users" size={0.9} /> Pipeline visitor sampai jadi member</li>
+          <li><Icon name="calendar" size={0.9} /> Meeting, tamu, dan kehadiran</li>
+          <li><Icon name="message" size={0.9} /> Blast WhatsApp dari template</li>
+        </ul>
+      </aside>
 
-        {error && <div className="alert">{error}</div>}
+      <main className="login__panel">
+        <div className="login__form-head">
+          <h2>Masuk</h2>
+          <p className="muted small">Gunakan akun yang terdaftar di chapter kamu.</p>
+        </div>
 
-        <form onSubmit={onSubmit}>
+        {error && (
+          <div className="alert" role="alert">
+            <Icon name="alert" size={0.95} /> <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} className="login__form">
           <label htmlFor="email">Email</label>
           <input
             id="email" type="email" value={email} autoComplete="username"
@@ -80,12 +121,24 @@ export default function Login() {
           />
 
           <label htmlFor="password">Password</label>
-          <input
-            id="password" type="password" value={password} autoComplete="current-password"
-            onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
-          />
+          <div className="field-with-action">
+            <input
+              id="password" type={reveal ? 'text' : 'password'} value={password}
+              autoComplete="current-password"
+              onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
+            />
+            <button
+              type="button" className="field-action" onClick={() => setReveal(v => !v)}
+              aria-pressed={reveal}
+            >
+              <Icon
+                name={reveal ? 'eye-off' : 'eye'}
+                label={reveal ? 'Sembunyikan password' : 'Tampilkan password'}
+              />
+            </button>
+          </div>
 
-          <button type="submit" className="btn btn--primary" disabled={!!busy}>
+          <button type="submit" className="btn btn--primary btn--block" disabled={!!busy}>
             {busy ? 'Memproses…' : 'Masuk ke Akun'}
           </button>
         </form>
@@ -93,22 +146,24 @@ export default function Login() {
         {demo?.accounts?.length ? (
           <>
             <div className="divider"><span>Masuk Cepat</span></div>
-            <div className="demo-grid">
+            <div className="demo-list">
               {demo.accounts.map(account => (
                 <button
                   key={account.email}
                   type="button"
-                  className={`demo-card${busy === account.email ? ' demo-card--busy' : ''}`}
+                  className={`demo-row${busy === account.email ? ' demo-row--busy' : ''}`}
                   disabled={!!busy}
                   onClick={() => void submit(account.email, demo.password)}
                   aria-label={`Masuk sebagai ${account.name}, ${account.label}, ${account.scope}`}
                 >
-                  <strong>{account.label}</strong>
-                  <span className="muted">{account.scope}</span>
-                  {/* The person, not just the role: the demo data refers to
-                      these names, so knowing who you are signed in as is what
-                      makes the visitor and activity rows read as a story. */}
-                  <span className="demo-card__who">{account.name}</span>
+                  <span className="demo-row__icon">
+                    <Icon name={ROLE_ICON[account.role] ?? 'user'} size={0.95} />
+                  </span>
+                  <span className="demo-row__text">
+                    <strong>{account.label}</strong>
+                    <span className="demo-row__who">{account.name} · {account.scope}</span>
+                  </span>
+                  <Icon name="chevron-right" size={0.9} className="demo-row__go" />
                 </button>
               ))}
             </div>
@@ -117,7 +172,7 @@ export default function Login() {
             </p>
           </>
         ) : null}
-      </div>
+      </main>
     </div>
   )
 }

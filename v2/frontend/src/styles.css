@@ -364,13 +364,214 @@ td select { min-width: 9rem; }
 /* ============================================================================
    Login and the public confirmation page
    ==========================================================================*/
-.login { min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem 1rem; }
-.login__card {
-  width: min(26rem, 100%); background: var(--surface);
-  border: 1px solid var(--line); border-radius: var(--r-xl);
-  padding: clamp(1.5rem, 4vw, 2.25rem); box-shadow: var(--shadow-2);
+/* Two panels on a laptop: identity on the left, the form on the right. A single
+   centred card left most of a wide screen empty, and on a per-chapter subdomain
+   the thing worth confirming before typing a password is which chapter you have
+   landed on — which a card names only in passing. */
+.login {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 1.5rem 1rem;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, rgba(217, 23, 59, .10), transparent 60%),
+    radial-gradient(45rem 32rem at 105% 110%, rgba(217, 23, 59, .07), transparent 55%),
+    var(--bg);
 }
-.login__card h1 { margin: 0; }
+
+@media (min-width: 62rem) {
+  .login {
+    grid-template-columns: 1.05fr 1fr;
+    align-items: stretch;
+    gap: clamp(2rem, 5vw, 5rem);
+    padding: 3rem clamp(2rem, 6vw, 6rem);
+  }
+}
+
+.login__brand {
+  width: min(30rem, 100%);
+  align-self: center;
+}
+
+
+.login__mark {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--r-md);
+  background: var(--red);
+  color: #fff;
+  box-shadow: var(--shadow-2);
+}
+
+.login__title {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.login__place {
+  margin: .4rem 0 0;
+  color: var(--muted);
+  font-size: .9375rem;
+}
+
+.login__pitch {
+  margin: 1.25rem 0 0;
+  max-width: 26rem;
+  color: var(--ink-2);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.login__points {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: .6rem;
+}
+
+.login__points li {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  color: var(--ink-2);
+  font-size: .9375rem;
+}
+
+.login__points svg { color: var(--red); flex: none; }
+
+/* Below the two-column breakpoint the panel shrinks to a header rather than
+   disappearing. Which chapter you have landed on is the one thing worth
+   confirming before typing a password on a per-chapter subdomain, and that is
+   as true on a phone as on a laptop — but the pitch and the feature list are
+   not, and they would push the form under the fold. */
+@media (max-width: 61.99rem) {
+  .login__brand {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: min(26rem, 100%);
+    margin-bottom: .25rem;
+  }
+  .login__mark { width: 2.5rem; height: 2.5rem; margin: 0; flex: none; }
+  .login__ident { min-width: 0; }
+  .login__title { font-size: 1.2rem; line-height: 1.25; }
+  .login__place { margin-top: .05rem; font-size: .8125rem; }
+  .login__pitch,
+  .login__points { display: none; }
+}
+
+.login__panel {
+  width: min(26rem, 100%);
+  align-self: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  box-shadow: var(--shadow-2);
+}
+
+.login__form-head h2 { margin: 0 0 .25rem; font-size: 1.35rem; }
+.login__form-head p { margin: 0 0 1.25rem; }
+
+/* An input with a control sitting inside its right edge. */
+.field-with-action { position: relative; display: flex; }
+.field-with-action input { width: 100%; padding-right: 2.75rem; }
+
+.field-action {
+  position: absolute;
+  right: .25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.field-action:hover { color: var(--ink); background: rgba(23, 24, 28, .05); }
+.field-action:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+
+.btn--block { width: 100%; justify-content: center; margin-top: 1rem; }
+
+/* Rows, not a grid of cards: nine accounts across two columns was a wall of
+   near-identical boxes, and the role — the only part that differs in what you
+   get to see — was the hardest thing to pick out. */
+.demo-list {
+  display: grid;
+  gap: .375rem;
+  /* Capped and scrolled rather than allowed to set the page height. With five
+     roles across three chapters the list is nine rows, which pushed the sign-in
+     form itself past the fold on a laptop — the demo shortcut crowding out the
+     thing it is a shortcut for. */
+  max-height: 17rem;
+  overflow-y: auto;
+  /* Room for the focus ring, which a flush overflow container would clip. */
+  padding: 2px;
+  margin: -2px;
+  overscroll-behavior: contain;
+}
+
+.demo-row {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  width: 100%;
+  padding: .5rem .625rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+
+.demo-row:hover:not(:disabled) { border-color: var(--red); background: var(--red-soft); }
+.demo-row:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+.demo-row:disabled { opacity: .45; cursor: not-allowed; }
+.demo-row--busy { opacity: .7; }
+
+.demo-row__icon {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex: none;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  color: var(--red);
+}
+
+.demo-row:hover:not(:disabled) .demo-row__icon { background: #fff; }
+
+.demo-row__text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.demo-row__text strong { font-size: .8125rem; }
+
+.demo-row__who {
+  font-size: .75rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-row__go { color: var(--line-strong); flex: none; }
+.demo-row:hover:not(:disabled) .demo-row__go { color: var(--red); }
+
+.login .alert { display: flex; align-items: center; gap: .5rem; }
+.login .alert svg { flex: none; }
 
 .divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0.9rem; }
 .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
@@ -379,16 +580,6 @@ td select { min-width: 9rem; }
   letter-spacing: 0.09em; color: var(--muted);
 }
 
-.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-@media (max-width: 24rem) { .demo-grid { grid-template-columns: 1fr; } }
-.demo-card {
-  display: flex; flex-direction: column; gap: 0.1rem; align-items: flex-start;
-  padding: 0.6rem 0.7rem; border: 1px solid var(--line-strong);
-  border-radius: var(--r-md); background: var(--surface);
-  cursor: pointer; text-align: left; font: inherit; font-size: 0.8rem;
-}
-.demo-card:hover:not(:disabled) { border-color: var(--red); background: var(--red-soft); }
-.demo-card:disabled { opacity: .45; cursor: not-allowed; }
 
 .confirm__icon {
   width: 3.25rem; height: 3.25rem; margin: 0 auto 1rem; border-radius: 999px;
@@ -688,12 +879,4 @@ td select { min-width: 9rem; }
 
 /* The signed-in person's name under the role. Muted and smaller: the role is
    what you pick by, the name is what you recognise once the data loads. */
-.demo-card__who {
-  font-size: .75rem;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
-.demo-card--busy { opacity: .6; }

@@ -118,7 +118,7 @@ func run(logger *slog.Logger) error {
 		Assistant:  handler.NewAssistantHandler(assistantUC),
 		Demo:       handler.NewDemoHandler(demoUC),
 		External:   handler.NewExternalHandler(members),
-	}, sessions, users, apiKeys, cfg.AllowedOrigins, obs, pool)
+	}, sessions, users, apiKeys, cfg.AllowedOrigins, cfg.Environment, obs, pool)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
