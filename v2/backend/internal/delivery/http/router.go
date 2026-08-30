@@ -38,6 +38,7 @@ type Handlers struct {
 	Narration  *handler.NarrationHandler
 	Assistant  *handler.AssistantHandler
 	Demo       *handler.DemoHandler
+	APIDocs    *handler.APIDocsHandler
 	External   *handler.ExternalHandler
 }
 
@@ -112,11 +113,16 @@ func NewRouter(
 	r.Route("/external/v1", func(ext chi.Router) {
 		ext.Use(middleware.LimitBody(middleware.DefaultMaxBody))
 		ext.Use(httprate.LimitByIP(120, time.Minute))
-		ext.Use(middleware.RequireAPIKey(apiKeys, "finance"))
+		ext.Use(middleware.RequireAPIKey(apiKeys))
 
-		ext.Get("/members", h.External.ListMembers)
-		ext.Get("/members/{id}", h.External.GetMember)
-		ext.Post("/members/{id}/renewal", h.External.Renew)
+		ext.With(middleware.RequireScope(domain.ScopeReadOnly)).
+			Get("/members", h.External.ListMembers)
+		ext.With(middleware.RequireScope(domain.ScopeReadOnly)).
+			Get("/members/{id}", h.External.GetMember)
+		// The only write the external API has, and the only place the two
+		// scopes actually differ.
+		ext.With(middleware.RequireScope(domain.ScopeFinance)).
+			Post("/members/{id}/renewal", h.External.Renew)
 	})
 
 	r.Route("/api", func(api chi.Router) {
@@ -224,6 +230,8 @@ func NewRouter(
 
 			private.Route("/api-keys", func(k chi.Router) {
 				k.Get("/", h.Governance.APIKeys)
+				k.Get("/scopes", h.Governance.APIScopes)
+				k.Get("/docs", h.APIDocs.Docs)
 				k.Post("/", h.Governance.CreateAPIKey)
 				k.Patch("/{id}/active", h.Governance.SetAPIKeyActive)
 				k.Delete("/{id}", h.Governance.DeleteAPIKey)

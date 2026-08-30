@@ -115,7 +115,8 @@ func (h *ExternalHandler) Renew(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req renewalRequest
-	if err := Decode(r, &req); err != nil {
+	// Optional by design: a body-less POST means "renew for another year".
+	if err := DecodeOptional(r, &req); err != nil {
 		WriteError(w, err)
 		return
 	}

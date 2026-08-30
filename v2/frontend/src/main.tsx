@@ -28,6 +28,7 @@ const MyAccount = lazy(() => import('./pages/MyAccount'))
 const Master = lazy(() => import('./pages/Master'))
 const Policies = lazy(() => import('./pages/Policies'))
 const ApiKeys = lazy(() => import('./pages/ApiKeys'))
+const ApiDocs = lazy(() => import('./pages/ApiDocs'))
 const Governance = lazy(() => import('./pages/Governance'))
 const TextFormat = lazy(() => import('./pages/TextFormat'))
 
@@ -74,6 +75,7 @@ function App() {
         <Route path="policies" element={isNational ? <Policies /> : <Navigate to="/" replace />} />
         <Route path="governance" element={isNational ? <Governance /> : <Navigate to="/" replace />} />
         <Route path="api-keys" element={isNational ? <ApiKeys /> : <Navigate to="/" replace />} />
+        <Route path="api-docs" element={isNational ? <ApiDocs /> : <Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
         </Routes>

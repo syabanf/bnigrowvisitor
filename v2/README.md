@@ -317,6 +317,20 @@ keanggotaan dan tanggal renewal, bukan nomor telepon, catatan, atau siapa yang
 mengajak. `is_overdue` diturunkan dari tanggalnya, bukan disimpan, jadi tidak
 bisa berbeda dari sumbernya.
 
+Scope-nya nyata, bukan hiasan. `readonly` bisa membaca member; `finance` bisa
+itu plus mencatat perpanjangan, dan merupakan superset dari `readonly` sehingga
+satu kunci cukup. Dicek per-route, bukan sekali di mount — membaca member dan
+mencatat perpanjangan bukan izin yang sama.
+
+Kunci bisa diberi masa berlaku (maksimal 730 hari) atau tanpa batas. Layar API
+Keys membedakan aktif, akan berakhir, kedaluwarsa, dan nonaktif: `FindByHash`
+menolak keduanya yang terakhir, jadi kalau layar tidak membedakannya tidak ada
+yang bisa mencari tahu kenapa sebuah kunci berhenti bekerja.
+
+Dokumentasinya ada di dalam aplikasi (`/api-docs`), disusun dari nilai yang sama
+dengan yang ditegakkan middleware — scope dan base URL tidak bisa melenceng dari
+yang sebenarnya berlaku.
+
 Key dicari lewat hash SHA-256 — plaintext-nya tidak pernah disimpan, jadi tidak
 ada yang bisa dibandingkan selain digest. Key tidak ada, dinonaktifkan, dan
 kedaluwarsa semuanya menghasilkan pesan yang sama; membedakannya akan memberi

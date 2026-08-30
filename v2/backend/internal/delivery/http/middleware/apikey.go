@@ -20,7 +20,7 @@ const apiKeyKey apiKeyCtxKey = iota
 // cookie, no chapter and no user, so reusing the session path would mean
 // inventing a fake identity for it. The two never mix — a browser cookie cannot
 // reach these routes and a key cannot reach the internal ones.
-func RequireAPIKey(keys domain.APIKeyRepository, requiredScope string) func(http.Handler) http.Handler {
+func RequireAPIKey(keys domain.APIKeyRepository) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			presented := extractKey(r)
@@ -41,16 +41,37 @@ func RequireAPIKey(keys domain.APIKeyRepository, requiredScope string) func(http
 				return
 			}
 
-			if requiredScope != "" && key.Scope != requiredScope {
-				writeStatus(w, http.StatusForbidden, "Scope API key tidak mencukupi.")
-				return
-			}
-
 			// Best-effort bookkeeping; a failure here must not fail the request.
 			_ = keys.TouchLastUsed(r.Context(), key.ID)
 
 			ctx := context.WithValue(r.Context(), apiKeyKey, key)
 			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// RequireScope gates one route on what the key is allowed to do. Applied per
+// route rather than once for the whole mount, because reading members and
+// recording a renewal are not the same permission — collapsing them is how
+// "readonly" came to mean "refused everywhere".
+func RequireScope(required domain.APIScope) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			key, ok := APIKeyFrom(r.Context())
+			if !ok {
+				writeStatus(w, http.StatusUnauthorized, "API key wajib disertakan.")
+				return
+			}
+			if !domain.APIScope(key.Scope).Allows(required) {
+				// Names what was needed. Unlike an authentication failure there
+				// is nothing to protect here — the caller already holds a valid
+				// key, and telling them which scope the route wants is the
+				// difference between a fixable error and a mystery.
+				writeStatus(w, http.StatusForbidden,
+					"Scope API key tidak mencukupi: butuh '"+string(required)+"'.")
+				return
+			}
+			next.ServeHTTP(w, r)
 		})
 	}
 }

@@ -162,10 +162,10 @@ type Visitor struct {
 	AttendedChoiceNumber *int   `json:"attended_choice_number,omitempty"`
 	AttendedChoiceNote   string `json:"attended_choice_note,omitempty"`
 
-	Notes string `json:"notes,omitempty"`
-	CreatedBy     *string       `json:"created_by,omitempty"`
-	CreatedAt     time.Time     `json:"created_at"`
-	UpdatedAt     time.Time     `json:"updated_at"`
+	Notes     string    `json:"notes,omitempty"`
+	CreatedBy *string   `json:"created_by,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	PICName     string     `json:"pic_name,omitempty"`
 	MeetingName string     `json:"meeting_name,omitempty"`

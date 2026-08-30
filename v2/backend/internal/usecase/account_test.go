@@ -56,9 +56,9 @@ func TestCanManageAccounts(t *testing.T) {
 
 func TestClampPage(t *testing.T) {
 	tests := []struct {
-		name                       string
-		limit, offset              int
-		wantLimit, wantOffset      int
+		name                  string
+		limit, offset         int
+		wantLimit, wantOffset int
 	}{
 		{"zero falls back to the default", 0, 0, defaultPageSize, 0},
 		{"negative falls back to the default", -5, -10, defaultPageSize, 0},

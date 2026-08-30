@@ -44,6 +44,7 @@ const NATIONAL_NAV: NavItem[] = [
   { to: '/policies', label: 'Policy', icon: 'sliders' },
   { to: '/governance', label: 'Audit', icon: 'shield' },
   { to: '/api-keys', label: 'API Keys', icon: 'key' },
+  { to: '/api-docs', label: 'Dokumentasi API', icon: 'clipboard' },
 ]
 
 export default function Layout() {

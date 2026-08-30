@@ -8,6 +8,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -63,6 +64,29 @@ func Decode(r *http.Request, dst any) error {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
+		return domain.ErrValidation
+	}
+	return nil
+}
+
+// DecodeOptional is Decode for a request whose body may legitimately be absent,
+// leaving dst at its zero value.
+//
+// The renewal endpoint documents its body as optional — "no date given means
+// renew for a year" — and then rejected an empty body with 400, because an
+// empty stream is io.EOF to the decoder. The simplest possible call, renew this
+// member, was the one that did not work.
+//
+// Only an entirely empty body is forgiven. Malformed JSON, or a body with a
+// field nobody recognises, is still refused: a typo in a field name that was
+// silently ignored would look like a successful call that changed nothing.
+func DecodeOptional(r *http.Request, dst any) error {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
 		return domain.ErrValidation
 	}
 	return nil

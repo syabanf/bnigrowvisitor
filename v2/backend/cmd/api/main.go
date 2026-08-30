@@ -117,6 +117,7 @@ func run(logger *slog.Logger) error {
 		Narration:  handler.NewNarrationHandler(narrationUC),
 		Assistant:  handler.NewAssistantHandler(assistantUC),
 		Demo:       handler.NewDemoHandler(demoUC),
+		APIDocs:    handler.NewAPIDocsHandler(cfg.PublicBaseURL),
 		External:   handler.NewExternalHandler(members),
 	}, sessions, users, apiKeys, cfg.AllowedOrigins, cfg.Environment, obs, pool)
 

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"bni-visitor/internal/domain"
 )
@@ -128,16 +129,46 @@ func (uc *GovernanceUsecase) APIKeys(ctx context.Context, role domain.Role) ([]d
 // CreateAPIKey mints a key, stores only its hash, and returns the plaintext
 // exactly once. Nothing can recover it afterwards — losing it means issuing a
 // new one, which is the property that makes a database leak survivable.
-func (uc *GovernanceUsecase) CreateAPIKey(ctx context.Context, role domain.Role, name, scope string) (*domain.APIKey, error) {
+// NewAPIKey is what the caller gets to choose. ExpiresInDays is zero for a key
+// that never expires, which stays possible — some integrations genuinely
+// outlive any date you would pick — but is no longer the only option.
+type NewAPIKey struct {
+	Name          string
+	Scope         string
+	ExpiresInDays int
+}
+
+// maxAPIKeyDays bounds the expiry. Beyond a couple of years the date stops
+// being a control and starts being decoration.
+const maxAPIKeyDays = 730
+
+func (uc *GovernanceUsecase) CreateAPIKey(ctx context.Context, role domain.Role, in NewAPIKey) (*domain.APIKey, error) {
 	if err := requireNational(role); err != nil {
 		return nil, err
 	}
-	name = strings.TrimSpace(name)
+	name := strings.TrimSpace(in.Name)
 	if name == "" {
-		return nil, domain.ErrValidation
+		return nil, fmt.Errorf("%w: nama kunci wajib diisi", domain.ErrValidation)
 	}
+
+	scope := domain.APIScope(strings.TrimSpace(in.Scope))
 	if scope == "" {
-		scope = "finance"
+		scope = domain.ScopeFinance
+	}
+	// Validated rather than stored as given. An unrecognised scope used to be
+	// accepted verbatim and then refused by every route, which produced a key
+	// that looked issued and worked nowhere.
+	if !scope.Valid() {
+		return nil, fmt.Errorf("%w: scope '%s' tidak dikenal", domain.ErrValidation, scope)
+	}
+
+	var expiresAt *time.Time
+	if in.ExpiresInDays > 0 {
+		if in.ExpiresInDays > maxAPIKeyDays {
+			return nil, fmt.Errorf("%w: masa berlaku maksimal %d hari", domain.ErrValidation, maxAPIKeyDays)
+		}
+		t := time.Now().AddDate(0, 0, in.ExpiresInDays)
+		expiresAt = &t
 	}
 
 	raw := make([]byte, 32)
@@ -150,8 +181,8 @@ func (uc *GovernanceUsecase) CreateAPIKey(ctx context.Context, role domain.Role,
 	hash := hex.EncodeToString(sum[:])
 
 	key := &domain.APIKey{
-		Name: name, Scope: scope, IsActive: true,
-		KeyPrefix: plain[:12],
+		Name: name, Scope: string(scope), IsActive: true,
+		KeyPrefix: plain[:12], ExpiresAt: expiresAt,
 	}
 	if err := uc.keys.Create(ctx, key, hash); err != nil {
 		return nil, err

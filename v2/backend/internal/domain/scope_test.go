@@ -11,12 +11,12 @@ func TestResolveScope(t *testing.T) {
 	rise := "chapter-rise"
 
 	tests := []struct {
-		name        string
-		role        Role
-		ownChapter  *string
-		requested   string
-		wantErr     error
-		wantChapter *string
+		name         string
+		role         Role
+		ownChapter   *string
+		requested    string
+		wantErr      error
+		wantChapter  *string
 		wantNational bool
 	}{
 		{

@@ -151,6 +151,10 @@ func (h *GovernanceHandler) APIKeys(w http.ResponseWriter, r *http.Request) {
 type apiKeyRequest struct {
 	Name  string `json:"name"`
 	Scope string `json:"scope"`
+	// Days rather than a date: the caller wants "ninety days", and letting the
+	// server work out when that is avoids a timezone argument at the boundary.
+	// Zero means no expiry.
+	ExpiresInDays int `json:"expires_in_days"`
 }
 
 func (h *GovernanceHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +163,9 @@ func (h *GovernanceHandler) CreateAPIKey(w http.ResponseWriter, r *http.Request)
 		WriteError(w, err)
 		return
 	}
-	key, err := h.governance.CreateAPIKey(r.Context(), role(r), req.Name, req.Scope)
+	key, err := h.governance.CreateAPIKey(r.Context(), role(r), usecase.NewAPIKey{
+		Name: req.Name, Scope: req.Scope, ExpiresInDays: req.ExpiresInDays,
+	})
 	if err != nil {
 		WriteError(w, err)
 		return
@@ -213,4 +219,23 @@ func (h *GovernanceHandler) Logins(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	WriteJSON(w, http.StatusOK, page)
+}
+
+// APIScopes lists the scopes a key can hold, with what each one permits.
+//
+// Served rather than hardcoded in the UI: the previous screen offered a scope
+// the server refused everywhere, and a list that comes from the same place the
+// check does cannot drift from it again.
+func (h *GovernanceHandler) APIScopes(w http.ResponseWriter, r *http.Request) {
+	if !role(r).IsNational() {
+		WriteError(w, domain.ErrForbidden)
+		return
+	}
+	out := make([]map[string]string, 0)
+	for _, s := range domain.AllAPIScopes() {
+		out = append(out, map[string]string{
+			"value": string(s), "description": s.Description(),
+		})
+	}
+	WriteJSON(w, http.StatusOK, map[string]any{"data": out})
 }

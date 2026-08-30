@@ -109,3 +109,48 @@ func TestWriteJSONSetsStatusAndBody(t *testing.T) {
 		t.Errorf("body = %v", body)
 	}
 }
+
+// The renewal endpoint documents its body as optional, and rejected an empty
+// one with 400 — the simplest call it has, "renew this member", was the one
+// that did not work.
+func TestDecodeOptional(t *testing.T) {
+	type body struct {
+		RenewalDate string `json:"renewal_date"`
+	}
+
+	cases := []struct {
+		name    string
+		payload string
+		wantErr bool
+		wantVal string
+	}{
+		{"empty body is allowed", "", false, ""},
+		{"a value still decodes", `{"renewal_date":"2027-12-31"}`, false, "2027-12-31"},
+		{"empty object is allowed", `{}`, false, ""},
+		// Forgiving an absent body must not become forgiving a wrong one: a
+		// mistyped field name that was ignored would look like a successful
+		// call that changed nothing.
+		{"unknown field is refused", `{"months":12}`, true, ""},
+		{"malformed json is refused", `{rusak`, true, ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodPost, "/x", strings.NewReader(tc.payload))
+			var got body
+			err := DecodeOptional(r, &got)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected an error for %q", tc.payload)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("DecodeOptional(%q): %v", tc.payload, err)
+			}
+			if got.RenewalDate != tc.wantVal {
+				t.Errorf("renewal_date = %q, want %q", got.RenewalDate, tc.wantVal)
+			}
+		})
+	}
+}

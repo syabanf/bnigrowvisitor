@@ -101,12 +101,18 @@ func (r *APIKeyRepository) List(ctx context.Context) ([]domain.APIKey, error) {
 }
 
 func (r *APIKeyRepository) Create(ctx context.Context, k *domain.APIKey, hash string) error {
+	// expires_at is written back from the row rather than kept from the struct.
+	// The column was missing from this INSERT while the handler echoed the
+	// expiry it had just computed, so a key created with a 90-day limit came
+	// back saying it expired in 90 days and was stored as never expiring — the
+	// control appeared to work and did nothing.
 	return r.db.QueryRow(ctx, `
-		INSERT INTO api_keys (name, key_prefix, key_hash, scope, organization_id)
-		VALUES ($1, $2, $3, $4,
+		INSERT INTO api_keys (name, key_prefix, key_hash, scope, expires_at, organization_id)
+		VALUES ($1, $2, $3, $4, $5,
 		        (SELECT id FROM organizations ORDER BY created_at LIMIT 1))
-		RETURNING id, created_at`,
-		k.Name, k.KeyPrefix, hash, k.Scope).Scan(&k.ID, &k.CreatedAt)
+		RETURNING id, created_at, expires_at`,
+		k.Name, k.KeyPrefix, hash, k.Scope, k.ExpiresAt,
+	).Scan(&k.ID, &k.CreatedAt, &k.ExpiresAt)
 }
 
 func (r *APIKeyRepository) SetActive(ctx context.Context, id string, active bool) error {
