@@ -132,7 +132,7 @@ Member-level account for future expansion.
 Responsibilities:
 
 - View/update own profile.
-- Future BRAG/gamification features can connect here.
+- Future gamification features can connect here.
 - Access only data allowed for their own chapter.
 
 Suggested role value: `member`.
@@ -151,7 +151,7 @@ Required scoped tables:
 - `interview_notes`
 - `activity_logs`
 - WA template/text format data
-- Any future gamification or BRAG tables
+- Any future gamification tables
 
 Recommended rule:
 
@@ -842,7 +842,7 @@ Questions to confirm before implementation:
 1. Should `admin@bnigrow.com` become BNI Indonesia admin, or should we create a new `admin@bniindonesia.com` account?
 2. Should existing PIC users remain `pic`, or become `chapter_admin` for Chapter Grow?
 3. Should every chapter have exactly one admin, or multiple chapter admins?
-4. Should member accounts have dashboard access now, or only future BRAG/member portal access?
+4. Should member accounts have dashboard access now, or only a future member portal?
 5. Should text format WA be global default with chapter override, or fully per chapter?
 6. Should cities/areas be BNI-specific names, or reusable generic master data?
 7. Should this app remain under the BNI Grow branding, or become BNI Visitor Platform with chapter branding inside?
