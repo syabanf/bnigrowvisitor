@@ -541,6 +541,17 @@ visitor punya lebih dari satu pemilik, tapi menampilkan ketiganya di layar login
 hanya memperlihatkan tampilan yang sama tiga kali dan mengubur peran yang
 benar-benar berbeda.
 
+Kelima role terwakili — `admin` (Super Admin), `national_admin`, `chapter_admin`,
+`pic`, `member` — sembilan tombol seluruhnya. Sebelumnya `admin` tidak punya akun
+sama sekali, jadi satu-satunya peran di atas national tidak bisa dicoba.
+
+Kunci API ikut di-seed supaya layar API Keys tidak kosong: tiga baris yang
+mencakup aktif, kedaluwarsa, dan dinonaktifkan. **Hash-nya dari nilai acak yang
+tidak pernah dicatat**, jadi itu catatan, bukan kredensial — terverifikasi
+menjawab 401. Kunci yang benar-benar bisa dipakai dibuat lewat UI; plaintext-nya
+hanya ditampilkan sekali saat pembuatan, jadi kunci yang sudah terdaftar memang
+tidak bisa dipakai bahkan di alur sungguhan.
+
 ## Data seed
 
 Datanya dirapikan supaya layak dipamerkan. Sebelumnya:

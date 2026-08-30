@@ -49,6 +49,14 @@ printf '\033[1mHardening test\033[0m  →  %s\n' "$BASE"
 
 for who in national grow rise pic; do
   code=$(login "$who@demo.test" "$who.jar")
+  if [ "$code" = "429" ]; then
+    # The rate-limit probe further down spends the whole login allowance, so a
+    # second run inside the same minute stops here. Said plainly, because the
+    # old message blamed the seed and sent people looking in the wrong place.
+    echo "login dibatasi rate limit (429) — jalankan lagi setelah satu menit;" >&2
+    echo "probe rate limit di run sebelumnya memakai jatah login untuk IP ini." >&2
+    exit 1
+  fi
   [ "$code" = "200" ] || { echo "cannot log in as $who@demo.test ($code) — is the stack seeded?"; exit 1; }
 done
 
@@ -286,12 +294,28 @@ else
   ok 'error body carries no stack trace or driver detail'
 fi
 
-# Any account a probe managed to create is removed, so a second run starts from
-# the same state as the first.
+# Any account a probe managed to create is deactivated, so a second run starts
+# from the same state as the first.
+#
+# Deactivated, not deleted: there is no DELETE route for accounts, by design —
+# a user id is referenced by activity logs, login audit and created_by columns,
+# and removing the row would orphan the trail that exists to explain what
+# happened. This step used to call DELETE, get a silent 404 (the response was
+# discarded), and leave the probe account behind on every run while claiming in
+# a comment to have cleaned up.
 for stray in esc1@x.test esc2@x.test esc3@x.test plantprobe@x.test; do
   sid=$(as national.jar "$API/accounts?limit=200" \
     | python3 -c "import sys,json;print(next((u['id'] for u in json.load(sys.stdin)['data'] if u['email']=='$stray'), ''))" 2>/dev/null)
-  [ -n "$sid" ] && as national.jar -X DELETE "$API/accounts/$sid" -o /dev/null
+  [ -n "$sid" ] || continue
+  code=$(as national.jar -o /dev/null -w '%{http_code}' \
+    -X PATCH "$API/accounts/$sid/active" -H 'Content-Type: application/json' \
+    -d '{"is_active":false}')
+  case "$code" in
+    200) ;;
+    # Surfaced rather than swallowed: a cleanup that quietly fails is how the
+    # previous one went unnoticed for as long as it did.
+    *) printf '  \033[33mNOTE\033[0m  gagal menonaktifkan %s (HTTP %s)\n' "$stray" "$code" ;;
+  esac
 done
 
 printf '\n\033[1m%d passed, %d failed\033[0m\n' "$pass" "$fail"
