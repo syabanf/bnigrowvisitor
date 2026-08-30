@@ -85,7 +85,9 @@ describe('Login', () => {
   it('still renders the sign-in form if the account list is malformed', async () => {
     mockApi({ matched: false }, { unexpected: true })
     render(<Login />)
-    expect(await screen.findByRole('button', { name: 'Masuk ke Akun' })).toBeInTheDocument()
+    // Matched on the submit button's accessible name, which now includes the
+    // icon-free label only — the button reads "Masuk" since the redesign.
+    expect(await screen.findByRole('button', { name: 'Masuk' })).toBeInTheDocument()
   })
 
   it('signs in with the demo password when a role button is pressed', async () => {

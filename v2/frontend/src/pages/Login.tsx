@@ -80,98 +80,112 @@ export default function Login() {
 
   return (
     <div className="login">
-      {/* Identity first, and on its own side of the screen. On a per-chapter
-          subdomain the thing worth confirming before typing a password is that
-          you are on the right chapter — a centred card names it in passing. */}
+      {/* Full-bleed panel rather than a card floating in the middle. On a
+          per-chapter subdomain the identity is the frame, not an aside. */}
       <aside className="login__brand">
-        <div className="login__mark"><Icon name="building" size={1.4} /></div>
-        {/* Wrapped so the compact mobile header can lay the mark beside the
-            text without the name and the place competing for the same row. */}
-        <div className="login__ident">
+        <div className="login__brand-top">
+          <p className="login__kicker">Visitor Management</p>
           <h1 className="login__title">{heading}</h1>
           {place && <p className="login__place">{place}</p>}
+          <p className="login__pitch">
+            Catat visitor, kelola member, jadwalkan meeting. Setiap follow-up
+            terekam sampai jadi member.
+          </p>
         </div>
-        <p className="login__pitch">
-          Kelola visitor, member, meeting, dan follow-up chapter dalam satu tempat.
-        </p>
-        <ul className="login__points">
-          <li><Icon name="users" size={0.9} /> Pipeline visitor sampai jadi member</li>
-          <li><Icon name="calendar" size={0.9} /> Meeting, tamu, dan kehadiran</li>
-          <li><Icon name="message" size={0.9} /> Blast WhatsApp dari template</li>
-        </ul>
+
+        <div className="login__brand-foot">
+          <p className="login__kicker login__kicker--foot">
+            <Icon name="trophy" size={0.95} /> Yang bisa dikelola
+          </p>
+          <ul className="login__points">
+            <li><Icon name="users" size={0.95} /> Pipeline visitor sampai jadi member</li>
+            <li><Icon name="calendar" size={0.95} /> Meeting, tamu, dan kehadiran</li>
+            <li><Icon name="message" size={0.95} /> Blast WhatsApp dari template</li>
+            <li><Icon name="chart" size={0.95} /> Konversi dan kehadiran per chapter</li>
+          </ul>
+        </div>
       </aside>
 
       <main className="login__panel">
-        <div className="login__form-head">
-          <h2>Masuk</h2>
-          <p className="muted small">Gunakan akun yang terdaftar di chapter kamu.</p>
-        </div>
-
-        {error && (
-          <div className="alert" role="alert">
-            <Icon name="alert" size={0.95} /> <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={onSubmit} className="login__form">
-          <label htmlFor="email">Email</label>
-          <input
-            id="email" type="email" value={email} autoComplete="username"
-            onChange={e => setEmail(e.target.value)} placeholder="nama@domain.com" required
-          />
-
-          <label htmlFor="password">Password</label>
-          <div className="field-with-action">
-            <input
-              id="password" type={reveal ? 'text' : 'password'} value={password}
-              autoComplete="current-password"
-              onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
-            />
-            <button
-              type="button" className="field-action" onClick={() => setReveal(v => !v)}
-              aria-pressed={reveal}
-            >
-              <Icon
-                name={reveal ? 'eye-off' : 'eye'}
-                label={reveal ? 'Sembunyikan password' : 'Tampilkan password'}
-              />
-            </button>
+        <div className="login__form-wrap">
+          <div className="login__form-head">
+            <h2>Masuk</h2>
+            <p className="muted small">Gunakan akun yang terdaftar di chapter kamu.</p>
           </div>
 
-          <button type="submit" className="btn btn--primary btn--block" disabled={!!busy}>
-            {busy ? 'Memproses…' : 'Masuk ke Akun'}
-          </button>
-        </form>
-
-        {demo?.accounts?.length ? (
-          <>
-            <div className="divider"><span>Masuk Cepat</span></div>
-            <div className="demo-list">
-              {demo.accounts.map(account => (
-                <button
-                  key={account.email}
-                  type="button"
-                  className={`demo-row${busy === account.email ? ' demo-row--busy' : ''}`}
-                  disabled={!!busy}
-                  onClick={() => void submit(account.email, demo.password)}
-                  aria-label={`Masuk sebagai ${account.name}, ${account.label}, ${account.scope}`}
-                >
-                  <span className="demo-row__icon">
-                    <Icon name={ROLE_ICON[account.role] ?? 'user'} size={0.95} />
-                  </span>
-                  <span className="demo-row__text">
-                    <strong>{account.label}</strong>
-                    <span className="demo-row__who">{account.name} · {account.scope}</span>
-                  </span>
-                  <Icon name="chevron-right" size={0.9} className="demo-row__go" />
-                </button>
-              ))}
+          {error && (
+            <div className="alert" role="alert">
+              <Icon name="alert" size={0.95} /> <span>{error}</span>
             </div>
-            <p className="muted center small">
-              Semua akun demo memakai password <code>{demo.password}</code>
-            </p>
-          </>
-        ) : null}
+          )}
+
+          <form onSubmit={onSubmit} className="login__form">
+            <label htmlFor="email">Email</label>
+            <div className="field-icon">
+              <Icon name="mail" size={0.95} className="field-icon__lead" />
+              <input
+                id="email" type="email" value={email} autoComplete="username"
+                onChange={e => setEmail(e.target.value)} placeholder="nama@domain.com" required
+              />
+            </div>
+
+            <label htmlFor="password">Kata Sandi</label>
+            <div className="field-icon">
+              <Icon name="lock" size={0.95} className="field-icon__lead" />
+              <input
+                id="password" type={reveal ? 'text' : 'password'} value={password}
+                autoComplete="current-password"
+                onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
+              />
+              <button
+                type="button" className="field-action" onClick={() => setReveal(v => !v)}
+                aria-pressed={reveal}
+              >
+                <Icon
+                  name={reveal ? 'eye-off' : 'eye'}
+                  label={reveal ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                />
+              </button>
+            </div>
+
+            <button type="submit" className="btn btn--primary btn--block" disabled={!!busy}>
+              <Icon name="login" size={0.95} /> {busy ? 'Memproses…' : 'Masuk'}
+            </button>
+          </form>
+
+          {demo?.accounts?.length ? (
+            <>
+              <div className="divider"><span>Atau coba sebagai</span></div>
+              <div className="demo-list">
+                {demo.accounts.map(account => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    className={`demo-row${busy === account.email ? ' demo-row--busy' : ''}`}
+                    disabled={!!busy}
+                    onClick={() => void submit(account.email, demo.password)}
+                    aria-label={`Masuk sebagai ${account.name}, ${account.label}, ${account.scope}`}
+                  >
+                    <span className="demo-row__icon">
+                      <Icon name={ROLE_ICON[account.role] ?? 'user'} size={1} />
+                    </span>
+                    <span className="demo-row__text">
+                      <strong>{account.label}</strong>
+                      <span className="demo-row__who">{account.name} · {account.scope}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="muted center small login__note">
+                Kata sandi semua akun demo: <code>{demo.password}</code>
+              </p>
+            </>
+          ) : null}
+
+          <p className="muted center small login__help">
+            Lupa kata sandi? Hubungi admin chapter kamu.
+          </p>
+        </div>
       </main>
     </div>
   )

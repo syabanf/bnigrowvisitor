@@ -15,7 +15,7 @@ export type IconName =
   | 'download' | 'upload' | 'plus' | 'trash' | 'key' | 'shield' | 'map'
   | 'users' | 'calendar' | 'message' | 'clipboard' | 'chart' | 'board'
   | 'user' | 'settings' | 'sliders' | 'clock' | 'help'
-  | 'eye' | 'eye-off' | 'building'
+  | 'eye' | 'eye-off' | 'building' | 'mail' | 'lock' | 'login' | 'trophy'
 
 const PATHS: Record<IconName, string> = {
   'check': 'M20 6 9 17l-5-5',
@@ -51,6 +51,10 @@ const PATHS: Record<IconName, string> = {
   'clock': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-16v6l4 2',
   'eye': 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zm11 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   'eye-off': 'M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22M6.61 6.61A18 18 0 0 0 1 12s4 8 11 8a9 9 0 0 0 5.39-1.61',
+  'mail': 'M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm18 2-10 7L2 6',
+  'lock': 'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zm3 0V7a4 4 0 0 1 8 0v4',
+  'login': 'M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4-5-5 5-5m-5 5h12',
+  'trophy': 'M6 4h12v5a6 6 0 0 1-12 0V4zM6 6H4a2 2 0 0 0 0 4h2m12-4h2a2 2 0 0 1 0 4h-2M9 21h6m-3-6v6',
   'building': 'M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1m4 0h1M9 11h1m4 0h1M9 15h1m4 0h1',
   'help': 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 1 1 4.2 2.8c-.8.4-1.3 1-1.3 1.9v.3M12 17h.01',
 }

@@ -364,125 +364,108 @@ td select { min-width: 9rem; }
 /* ============================================================================
    Login and the public confirmation page
    ==========================================================================*/
-/* Two panels on a laptop: identity on the left, the form on the right. A single
-   centred card left most of a wide screen empty, and on a per-chapter subdomain
-   the thing worth confirming before typing a password is which chapter you have
-   landed on — which a card names only in passing. */
+/* Full-bleed split: a solid identity panel on one side, the form on the other,
+   both running to the edge of the viewport. A centred card left most of a wide
+   screen empty, and on a per-chapter subdomain the identity is the frame rather
+   than a footnote. */
 .login {
   min-height: 100dvh;
   display: grid;
   grid-template-columns: 1fr;
-  place-items: center;
-  padding: 1.5rem 1rem;
-  background:
-    radial-gradient(60rem 40rem at 15% -10%, rgba(217, 23, 59, .10), transparent 60%),
-    radial-gradient(45rem 32rem at 105% 110%, rgba(217, 23, 59, .07), transparent 55%),
-    var(--bg);
+  background: var(--surface);
 }
 
 @media (min-width: 62rem) {
-  .login {
-    grid-template-columns: 1.05fr 1fr;
-    align-items: stretch;
-    gap: clamp(2rem, 5vw, 5rem);
-    padding: 3rem clamp(2rem, 6vw, 6rem);
-  }
+  .login { grid-template-columns: 1fr 1fr; }
 }
 
 .login__brand {
-  width: min(30rem, 100%);
-  align-self: center;
-}
-
-
-.login__mark {
-  display: grid;
-  place-items: center;
-  width: 3rem;
-  height: 3rem;
-  margin-bottom: 1.25rem;
-  border-radius: var(--r-md);
-  background: var(--red);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(2rem, 5vw, 4rem);
   color: #fff;
-  box-shadow: var(--shadow-2);
+  /* Two stops of the same red rather than a flat fill: at this size a single
+     value reads as a printing error. */
+  background: linear-gradient(150deg, var(--red) 0%, var(--red-dark) 100%);
 }
+
+.login__kicker {
+  margin: 0 0 .75rem;
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .75);
+}
+
+.login__kicker--foot { margin-bottom: 1rem; }
 
 .login__title {
   margin: 0;
-  font-size: clamp(1.75rem, 3vw, 2.4rem);
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 800;
 }
 
 .login__place {
-  margin: .4rem 0 0;
-  color: var(--muted);
-  font-size: .9375rem;
+  margin: .6rem 0 0;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, .8);
 }
 
 .login__pitch {
-  margin: 1.25rem 0 0;
-  max-width: 26rem;
-  color: var(--ink-2);
+  margin: 1.5rem 0 0;
+  max-width: 30rem;
   font-size: 1.0625rem;
-  line-height: 1.6;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, .88);
 }
 
-.login__points {
-  margin: 1.5rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: .6rem;
-}
+.login__points { margin: 0; padding: 0; list-style: none; display: grid; gap: .7rem; }
 
 .login__points li {
   display: flex;
   align-items: center;
-  gap: .55rem;
-  color: var(--ink-2);
+  gap: .6rem;
   font-size: .9375rem;
+  color: rgba(255, 255, 255, .9);
 }
 
-.login__points svg { color: var(--red); flex: none; }
-
-/* Below the two-column breakpoint the panel shrinks to a header rather than
-   disappearing. Which chapter you have landed on is the one thing worth
-   confirming before typing a password on a per-chapter subdomain, and that is
-   as true on a phone as on a laptop — but the pitch and the feature list are
-   not, and they would push the form under the fold. */
-@media (max-width: 61.99rem) {
-  .login__brand {
-    display: flex;
-    align-items: center;
-    gap: .75rem;
-    width: min(26rem, 100%);
-    margin-bottom: .25rem;
-  }
-  .login__mark { width: 2.5rem; height: 2.5rem; margin: 0; flex: none; }
-  .login__ident { min-width: 0; }
-  .login__title { font-size: 1.2rem; line-height: 1.25; }
-  .login__place { margin-top: .05rem; font-size: .8125rem; }
-  .login__pitch,
-  .login__points { display: none; }
-}
+.login__points svg { flex: none; color: rgba(255, 255, 255, .7); }
 
 .login__panel {
-  width: min(26rem, 100%);
-  align-self: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-xl);
-  padding: clamp(1.5rem, 4vw, 2.25rem);
-  box-shadow: var(--shadow-2);
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 4vw, 3rem);
 }
 
-.login__form-head h2 { margin: 0 0 .25rem; font-size: 1.35rem; }
-.login__form-head p { margin: 0 0 1.25rem; }
+/* No card: on its own half of the screen the form does not need a border to be
+   found, and the box was competing with the panel beside it. */
+.login__form-wrap { width: min(24rem, 100%); }
 
-/* An input with a control sitting inside its right edge. */
-.field-with-action { position: relative; display: flex; }
-.field-with-action input { width: 100%; padding-right: 2.75rem; }
+.login__form-head h2 { margin: 0 0 .25rem; font-size: 1.6rem; letter-spacing: -0.01em; }
+.login__form-head p { margin: 0 0 1.5rem; }
+
+/* An input with an icon inside the leading edge, and optionally a control at
+   the trailing one. */
+.field-icon { position: relative; display: flex; }
+.field-icon input { width: 100%; padding-left: 2.5rem; }
+.field-icon:has(.field-action) input { padding-right: 2.75rem; }
+
+.field-icon__lead {
+  position: absolute;
+  left: .85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--red);
+  pointer-events: none;
+}
 
 .field-action {
   position: absolute;
@@ -503,21 +486,28 @@ td select { min-width: 9rem; }
 .field-action:hover { color: var(--ink); background: rgba(23, 24, 28, .05); }
 .field-action:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
 
-.btn--block { width: 100%; justify-content: center; margin-top: 1rem; }
+.btn--block {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  margin-top: 1.25rem;
+  padding-top: .7rem;
+  padding-bottom: .7rem;
+}
 
 /* Rows, not a grid of cards: nine accounts across two columns was a wall of
-   near-identical boxes, and the role — the only part that differs in what you
-   get to see — was the hardest thing to pick out. */
+   near-identical boxes, and the role — the only part that changes what you get
+   to see — was the hardest thing to pick out. */
 .demo-list {
   display: grid;
-  gap: .375rem;
-  /* Capped and scrolled rather than allowed to set the page height. With five
-     roles across three chapters the list is nine rows, which pushed the sign-in
-     form itself past the fold on a laptop — the demo shortcut crowding out the
-     thing it is a shortcut for. */
-  max-height: 17rem;
+  gap: .4rem;
+  /* Capped and scrolled rather than allowed to set the page height: with five
+     roles across three chapters this is nine rows, which pushed the form itself
+     past the fold — the shortcut crowding out the thing it shortcuts. */
+  max-height: 15.5rem;
   overflow-y: auto;
-  /* Room for the focus ring, which a flush overflow container would clip. */
   padding: 2px;
   margin: -2px;
   overscroll-behavior: contain;
@@ -526,19 +516,23 @@ td select { min-width: 9rem; }
 .demo-row {
   display: flex;
   align-items: center;
-  gap: .625rem;
+  gap: .75rem;
   width: 100%;
-  padding: .5rem .625rem;
+  padding: .6rem .75rem;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   background: var(--surface);
   text-align: left;
   font: inherit;
   cursor: pointer;
-  transition: border-color .12s ease, background .12s ease;
+  transition: border-color .12s ease, box-shadow .12s ease;
 }
 
-.demo-row:hover:not(:disabled) { border-color: var(--red); background: var(--red-soft); }
+.demo-row:hover:not(:disabled) {
+  border-color: var(--red);
+  box-shadow: 0 1px 8px rgba(217, 23, 59, .12);
+}
+
 .demo-row:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
 .demo-row:disabled { opacity: .45; cursor: not-allowed; }
 .demo-row--busy { opacity: .7; }
@@ -546,18 +540,16 @@ td select { min-width: 9rem; }
 .demo-row__icon {
   display: grid;
   place-items: center;
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 2.1rem;
+  height: 2.1rem;
   flex: none;
   border-radius: var(--r-sm);
-  background: var(--surface-2);
+  background: var(--red-soft);
   color: var(--red);
 }
 
-.demo-row:hover:not(:disabled) .demo-row__icon { background: #fff; }
-
 .demo-row__text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-.demo-row__text strong { font-size: .8125rem; }
+.demo-row__text strong { font-size: .875rem; }
 
 .demo-row__who {
   font-size: .75rem;
@@ -567,19 +559,49 @@ td select { min-width: 9rem; }
   white-space: nowrap;
 }
 
-.demo-row__go { color: var(--line-strong); flex: none; }
-.demo-row:hover:not(:disabled) .demo-row__go { color: var(--red); }
-
-.login .alert { display: flex; align-items: center; gap: .5rem; }
-.login .alert svg { flex: none; }
-
-.divider { display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0.9rem; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-.divider span {
-  font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.09em; color: var(--muted);
+/* Restored after a wholesale rewrite of the login block took it with it. Only
+   this page uses it; .login__card, .demo-grid and .demo-card went at the same
+   time and were genuinely dead. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin: 1.75rem 0 1rem;
 }
 
+.divider::before,
+.divider::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+.divider span {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.login__note { margin-top: .875rem; }
+.login__help { margin-top: 1.5rem; }
+
+.login .alert { display: flex; align-items: center; gap: .5rem; margin-bottom: 1rem; }
+.login .alert svg { flex: none; }
+
+/* Below the split, the panel becomes a band across the top rather than
+   disappearing. Which chapter you have landed on is worth confirming before
+   typing a password, and that is as true on a phone as on a laptop — the pitch
+   and the list are not, and they would push the form under the fold. */
+@media (max-width: 61.99rem) {
+  .login__brand {
+    gap: 0;
+    padding: 1.5rem 1.25rem;
+  }
+  .login__kicker { margin-bottom: .4rem; font-size: .65rem; }
+  .login__title { font-size: 1.5rem; }
+  .login__place { margin-top: .2rem; font-size: .875rem; }
+  .login__pitch,
+  .login__brand-foot { display: none; }
+}
 
 .confirm__icon {
   width: 3.25rem; height: 3.25rem; margin: 0 auto 1rem; border-radius: 999px;
