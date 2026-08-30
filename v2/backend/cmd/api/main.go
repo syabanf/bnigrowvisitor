@@ -53,7 +53,9 @@ func run(logger *slog.Logger) error {
 
 	// Applied on every boot, not just the first: the previous setup relied on
 	// Postgres's init hook, which never runs again once the volume has data.
-	if err := database.Migrate(ctx, pool, logger); err != nil {
+	if err := database.Migrate(ctx, pool, logger, database.Options{
+		IncludeSeeds: cfg.SeedDemoData,
+	}); err != nil {
 		return err
 	}
 
@@ -131,6 +133,24 @@ func run(logger *slog.Logger) error {
 	}
 
 	// Housekeeping runs alongside the server and stops with it.
+	// Before the server accepts a request, not on a timer: a seeded account
+	// must not be reachable even for the seconds between boot and the first
+	// sweep.
+	if err := maintenance.DisableDemoAccounts(ctx, pool, cfg.Environment, logger); err != nil {
+		logger.Error("gagal menonaktifkan akun demo", "err", err)
+	}
+
+	// After the demo accounts are disabled, not before: a production database
+	// seeded earlier still counts them as admins, and checking first would
+	// decide there was already a way in.
+	if err := maintenance.EnsureAdmin(ctx, pool, maintenance.BootstrapAdmin{
+		Email:    cfg.BootstrapAdminEmail,
+		Password: cfg.BootstrapAdminPassword,
+		Name:     cfg.BootstrapAdminName,
+	}, logger); err != nil {
+		logger.Error("gagal menyiapkan admin bootstrap", "err", err)
+	}
+
 	go maintenance.Run(ctx, pool, maintenance.DefaultRetention(), logger)
 
 	serverErr := make(chan error, 1)

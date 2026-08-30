@@ -48,6 +48,15 @@ services:
       # Quick sign-in on the login screen. This compose file is the demo and
       # development stack, so it is on here; a real deployment leaves it unset,
       # and the endpoint answers 404 rather than listing working credentials.
+      # Data contoh. Default-nya mengikuti APP_ENV: mati di production, karena
+      # migrasi seed membuat akun yang passwordnya tertulis di README.
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      # Admin pertama untuk database yang belum punya admin aktif. Dibaca sekali
+      # saat start; tidak membuat akun kedua dan tidak menimpa password yang
+      # sudah diganti.
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Administrator}
       DEMO_MODE: ${DEMO_MODE:-true}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo123}
       # Pool size. Raise with the database, not with the traffic: measured at

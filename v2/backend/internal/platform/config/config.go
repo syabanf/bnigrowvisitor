@@ -48,6 +48,18 @@ type Config struct {
 	// demo and wrong everywhere else, so it is never inferred from anything.
 	DemoMode     bool
 	DemoPassword string
+
+	// SeedDemoData applies the demonstration migrations. Off in production by
+	// default, because those migrations create accounts whose shared password
+	// is published in the README — running them on a reachable host puts a
+	// known credential on the internet.
+	SeedDemoData bool
+
+	// The first administrator on a database that has none. Read once at
+	// startup; production skips the seeds, so without this there is no way in.
+	BootstrapAdminEmail    string
+	BootstrapAdminPassword string
+	BootstrapAdminName     string
 }
 
 func Load() (*Config, error) {
@@ -72,6 +84,15 @@ func Load() (*Config, error) {
 
 		AllowedOrigins: splitOrigins(env("CORS_ORIGIN", "http://localhost:8095,http://localhost:5173")),
 	}
+
+	// Derived from the environment rather than defaulted blindly, and still
+	// overridable: a staging box may legitimately want the sample data, and a
+	// developer may legitimately want an empty database.
+	cfg.SeedDemoData = env("SEED_DEMO_DATA", boolText(cfg.Environment != "production")) == "true"
+
+	cfg.BootstrapAdminEmail = strings.ToLower(strings.TrimSpace(os.Getenv("BOOTSTRAP_ADMIN_EMAIL")))
+	cfg.BootstrapAdminPassword = os.Getenv("BOOTSTRAP_ADMIN_PASSWORD")
+	cfg.BootstrapAdminName = env("BOOTSTRAP_ADMIN_NAME", "Administrator")
 
 	days, err := strconv.Atoi(env("SESSION_MAX_AGE_DAYS", "7"))
 	if err != nil {
@@ -119,6 +140,13 @@ func validateSecret(secret, environment string) error {
 			"panjang", len(secret), "minimal", minSecretLength)
 	}
 	return nil
+}
+
+func boolText(v bool) string {
+	if v {
+		return "true"
+	}
+	return "false"
 }
 
 func env(key, fallback string) string {

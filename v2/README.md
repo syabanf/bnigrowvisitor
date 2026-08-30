@@ -586,6 +586,51 @@ quick tour dan tangkapan layar merujuk ke mereka.
 Ditulis sebagai UPDATE, bukan seed ulang: barisnya direferensikan meeting, log
 aktivitas, dan entri audit, dan menggantinya akan membuat semua itu menggantung.
 
+## Menjalankan di production
+
+`APP_ENV=production` mengubah tiga hal:
+
+1. **Migrasi data contoh dilewati.** Migrasi yang namanya mengandung `_seed`
+   tidak dijalankan. Migrasi itu membuat akun yang passwordnya tertulis di
+   README ini — menjalankannya di host yang bisa dijangkau berarti menaruh
+   kredensial yang diketahui publik di internet.
+2. **Akun `@demo.test` yang masih aktif dinonaktifkan saat start**, dan dicatat
+   di log lengkap dengan daftarnya. Ini untuk database yang sudah terlanjur
+   ter-seed sebelum pemisahan ini ada. Dinonaktifkan, bukan dihapus: id user
+   dirujuk log aktivitas, audit login, dan kolom `created_by`. Data contohnya
+   sendiri (visitor, member) dibiarkan — menghapus baris otomatis saat start
+   jauh lebih berbahaya daripada berguna.
+3. **Pesan penolakan CSRF jadi ringkas**, tidak menyebut isi allowlist.
+
+Konsekuensinya database production tidak punya user sama sekali. Dua variabel
+ini yang membuat admin pertama:
+
+```bash
+BOOTSTRAP_ADMIN_EMAIL=ops@contoh.id
+BOOTSTRAP_ADMIN_PASSWORD='...'      # tunduk pada kebijakan password yang sama
+```
+
+Dibaca sekali saat start dan hanya berlaku kalau belum ada admin aktif, jadi
+aman ditinggal terpasang: menjalankan ulang tidak membuat akun kedua dan tidak
+menimpa password yang sudah diganti. Passwordnya tidak pernah masuk log.
+
+### Skema vs data contoh
+
+Nama file yang menentukan: mengandung `_seed` berarti data contoh, selain itu
+skema. Konvensi, bukan daftar terpisah — supaya klasifikasinya terlihat di
+listing direktori dan tidak bisa melenceng dari daftar di tempat lain. Dipaku
+oleh tes: migrasi yang menyisipkan ke `users`, `visitors`, `members`, `guests`,
+`meetings`, atau `api_keys` tanpa penanda itu menggagalkan build.
+
+Satu baris sengaja **bukan** data contoh: `008a_bootstrap_organization.sql`.
+Organisasi dulunya dibuat di `002_seed.sql` bersama akun demo, jadi melewati
+seed juga melewati organisasinya — dan migrasi 009, yang menyisipkan policy
+default merujuk organisasi itu, gagal foreign key dan membatalkan seluruh
+migrasi. Database production baru tidak bisa start sama sekali. Dinomori `008a`
+supaya urut di antara 008 dan 009 (`_` mendahului `a`); database lama sudah
+melewati 009, jadi kedatangannya belakangan tidak apa-apa karena insert-nya
+idempoten.
+
 ## CI
 
 `.github/workflows/` menjalankan keduanya. Job backend menyalakan Postgres

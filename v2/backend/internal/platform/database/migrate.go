@@ -35,12 +35,31 @@ type migration struct {
 	version  string
 	body     string
 	checksum string
+	// seed marks a migration that inserts demonstration data rather than
+	// changing the schema.
+	seed bool
+}
+
+// seedMarker is how a migration declares itself demonstration data.
+//
+// A convention rather than a manifest, so the classification is visible in a
+// directory listing and cannot fall out of step with a list somewhere else. It
+// is pinned by a test: adding a migration whose name does not say which kind it
+// is fails the build rather than quietly shipping fake members to production.
+const seedMarker = "_seed"
+
+// Options controls what Migrate applies.
+type Options struct {
+	// IncludeSeeds applies the demonstration data. False in production, where
+	// the seed accounts — every one of them sharing a password published in the
+	// README — would otherwise be live on a reachable host.
+	IncludeSeeds bool
 }
 
 // Migrate applies every migration not yet recorded, in filename order, each in
 // its own transaction so a failure leaves the database on the last good version
 // rather than half-way through one.
-func Migrate(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) error {
+func Migrate(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, opts Options) error {
 	if _, err := pool.Exec(ctx, migrationTable); err != nil {
 		return fmt.Errorf("gagal menyiapkan tabel migrasi: %w", err)
 	}
@@ -55,8 +74,15 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) error
 		return err
 	}
 
-	pending := 0
+	pending, skipped := 0, 0
 	for _, m := range available {
+		if m.seed && !opts.IncludeSeeds {
+			// Logged, not passed over in silence: an operator looking at an
+			// empty database needs to see that this was a decision.
+			logger.Info("melewati migrasi data contoh", "version", m.version)
+			skipped++
+			continue
+		}
 		if existing, done := applied[m.version]; done {
 			// An edited migration means the database and the source no longer
 			// agree; silently ignoring that is how environments drift apart.
@@ -75,10 +101,11 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) error
 		pending++
 	}
 
-	if pending == 0 {
-		logger.Info("skema database sudah mutakhir", "total", len(available))
-	} else {
-		logger.Info("migrasi selesai", "diterapkan", pending, "total", len(available))
+	switch {
+	case pending == 0:
+		logger.Info("skema database sudah mutakhir", "total", len(available), "dilewati", skipped)
+	default:
+		logger.Info("migrasi selesai", "diterapkan", pending, "total", len(available), "dilewati", skipped)
 	}
 	return nil
 }
@@ -103,6 +130,7 @@ func loadMigrations() ([]migration, error) {
 			version:  entry.Name(),
 			body:     string(body),
 			checksum: hex.EncodeToString(sum[:]),
+			seed:     strings.Contains(entry.Name(), seedMarker),
 		})
 	}
 
