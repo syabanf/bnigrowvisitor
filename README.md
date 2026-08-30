@@ -1,10 +1,54 @@
-# BNI Visitor Manager — Progress & Handoff
+# BNI Visitor Manager
 
-Sistem manajemen visitor untuk BNI, multi-tenant SaaS berbasis subdomain per chapter.
+Sistem manajemen visitor untuk BNI — multi-tenant SaaS, satu subdomain per
+chapter. Repo ini berisi **dua aplikasi lengkap** yang mengerjakan hal yang
+sama dengan cara berbeda.
 
-**Production:** `https://grow.bni-vh.com` (Chapter Grow) · `https://rise.bni-vh.com` (Chapter Rise) · `https://bni-vh.com` (National)
+| | Stack | Lokasi | Status |
+|---|---|---|---|
+| **v1** | Next.js 16 · React · Supabase (PostgREST) | [`src/`](src) | Jalan di production |
+| **v2** | React + Vite · **Go** (clean architecture) · PostgreSQL | [`v2/`](v2) | Rebuild, fitur sudah setara |
+
+**Production (v1):** `https://grow.bni-vh.com` (Chapter Grow) ·
+`https://rise.bni-vh.com` (Chapter Rise) · `https://bni-vh.com` (National)
+
+## v2 — rebuild dengan backend sendiri
+
+v1 berbicara langsung ke Supabase dari browser. v2 menaruh API Go di antaranya,
+sehingga otorisasi, audit, dan scope chapter ditegakkan di server, bukan
+dipercayakan ke klien.
+
+```bash
+cd v2
+cp .env.example .env      # isi SESSION_SECRET
+docker compose up -d      # http://localhost:8095
+```
+
+Semua akun demo memakai password `demo123`, dan layar login menyediakan tombol
+masuk cepat per peran.
+
+Yang ada di dalamnya:
+
+- **Backend Go** — `domain` → `usecase` → `repository`/`delivery`, tanpa
+  framework ORM; migrasi tertanam di binary dan diperiksa checksum-nya
+- **Keamanan** — sesi divalidasi ulang ke database tiap request, isolasi
+  chapter, lockout akun, penjaga CSRF, API key untuk integrasi mesin.
+  [63 pemeriksaan hardening](v2/scripts/hardening-test.sh) yang menegaskan
+  hasilnya, bukan sekadar mencetak respons
+- **Performa** — [stress test](v2/scripts/stress-test.sh) yang menemukan jebakan
+  generic plan Postgres: pencarian 28 ms jadi 1,7 ms
+- **Operasional** — metrik Prometheus, readiness probe terpisah dari liveness,
+  backup terjadwal yang sudah dibuktikan bisa di-restore
+
+Detail lengkap, termasuk kenapa tiap keputusan diambil, ada di
+**[`v2/README.md`](v2/README.md)**.
 
 ---
+
+# v1 — catatan progress & handoff
+
+Bagian di bawah ini adalah dokumen serah terima aplikasi Next.js yang jalan di
+production. Disimpan apa adanya sebagai catatan sejarah.
 
 ## Status Terakhir (14 Juni 2026)
 
