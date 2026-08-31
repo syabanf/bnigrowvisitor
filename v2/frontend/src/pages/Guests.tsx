@@ -23,7 +23,10 @@ export default function Guests() {
 
   return (
     <>
-      <h1>Guest</h1>
+      <div className="page-title">
+        <h1>Guest</h1>
+        <span className="count-chip">{total.toLocaleString('id-ID')} guest</span>
+      </div>
       <p className="muted small">
         Tamu yang hadir tanpa lewat alur visitor — dipisah supaya statistik konversi visitor tetap bersih.
       </p>
@@ -36,7 +39,6 @@ export default function Guests() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-      <p className="muted small">Menampilkan {items.length} dari {total} guest</p>
 
       <Table
         rows={items}

@@ -277,15 +277,20 @@ code {
   border-radius: var(--r-xl); box-shadow: var(--shadow-1);
 }
 table { width: 100%; border-collapse: collapse; font-size: 0.875rem; min-width: 42rem; }
-th, td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+/* middle, not top: with a control in one column and two lines of text in
+   another, top alignment left every row looking like it had drifted upward. */
+th, td { text-align: left; padding: 0.6rem 0.9rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th {
   font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.055em;
   color: var(--muted); font-weight: 700;
   background: var(--surface-2); position: sticky; top: 0; z-index: 1;
 }
 tbody tr:last-child td { border-bottom: 0; }
+tbody tr { transition: background-color .1s ease; }
 tbody tr:hover { background: var(--surface-2); }
-td select { min-width: 9rem; }
+/* No blanket width. A select stretched to 9rem in every row was what made the
+   rows tall and boxy; the ones that need width now ask for it. */
+td select { min-width: 0; }
 
 .form-grid { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
 .form-grid label { margin-top: 0; }
@@ -1000,4 +1005,322 @@ td select { min-width: 9rem; }
 @media (max-width: 40rem) {
   .page-head { flex-direction: column; align-items: stretch; }
   .page-head .btn { justify-content: center; }
+}
+
+
+/* ---- Status shown as a pill that is still a select ---------------------- */
+
+.status-select { position: relative; display: inline-flex; }
+
+.status-select select {
+  appearance: none;
+  min-height: 0;
+  height: auto;
+  padding: .2rem 1.4rem .2rem .55rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+/* The chevron is drawn here rather than left to the browser, which renders a
+   full-height arrow that reintroduces the box this replaces. */
+.status-select::after {
+  content: '';
+  position: absolute;
+  right: .5rem;
+  top: 50%;
+  width: .3rem;
+  height: .3rem;
+  margin-top: -.22rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  opacity: .45;
+  pointer-events: none;
+}
+
+.status-select select:hover { border-color: var(--line-strong); }
+.status-select select:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+
+.status-select.pill--good select   { background: #ecfdf3; color: var(--good); }
+.status-select.pill--warn select   { background: #fef3c7; color: #92400e; }
+.status-select.pill--danger select { background: #fee2e2; color: #991b1b; }
+.status-select.pill--muted select  { background: var(--surface-2); color: var(--muted); }
+.status-select.pill--quiet select  { background: var(--surface-2); color: var(--ink-2); }
+
+/* A pill for a value that is normal. Bordered rather than filled, so a list
+   where most rows are fine does not become a block of colour. */
+.pill--quiet {
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong);
+}
+
+/* ---- Sidebar sections --------------------------------------------------- */
+
+.navgroup { display: flex; flex-direction: column; gap: .1rem; }
+.navgroup + .navgroup { margin-top: .85rem; }
+
+.navgroup__title {
+  margin: 0 0 .3rem .7rem;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* A bar on the leading edge instead of a filled block. The filled state was
+   the loudest thing in the sidebar, and it was marking the page you are
+   already on — the one thing you do not need pointed out. */
+.navlink--active {
+  background: var(--red-soft);
+  color: var(--red);
+  font-weight: 650;
+  position: relative;
+}
+
+.navlink--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 1.1rem;
+  border-radius: 0 3px 3px 0;
+  background: var(--red);
+}
+
+/* ---- Page header -------------------------------------------------------- */
+
+.page-title { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+.page-title h1 { margin: 0; }
+
+.count-chip {
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Filters sit against the table rather than floating above it, so the two read
+   as one object. */
+.filters {
+  margin: 1rem 0 0;
+  padding: .75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.filters + .table-wrap,
+.filters + .alert + .table-wrap { border-radius: 0 0 var(--r-xl) var(--r-xl); }
+
+
+/* ============================================================================
+   Three shapes, not one layout scaled down
+   ==========================================================================*/
+
+/* -- Phone: rows become cards --------------------------------------------- */
+/*
+   A table that scrolls sideways is the single most "this is a website squeezed
+   onto a phone" thing an app can do — the columns off-screen may as well not
+   exist. Below this width each row is a card and each value carries the header
+   it came from, which is what data-label on the cells is for.
+*/
+@media (max-width: 47.9375rem) {
+  .table-wrap {
+    overflow-x: visible;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  table { min-width: 0; display: block; }
+  thead { display: none; }
+  tbody { display: grid; gap: .5rem; }
+
+  tbody tr {
+    display: grid;
+    gap: .3rem;
+    padding: .8rem .9rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-1);
+  }
+
+  tbody tr:hover { background: var(--surface); }
+
+  tbody td {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    align-items: center;
+    /* Values sit left, not stretched: a status pill filling the card's width
+       reads as a button, and a date in a full-width box reads as an input. */
+    justify-items: start;
+    gap: .3rem .75rem;
+    padding: 0;
+    border: 0;
+  }
+
+  /* A cell with more than one value — phone above email, name above company —
+     puts every element in the value column. Without this the second element
+     wraps onto the next row and lands under the label instead. */
+  /* Not the first cell: that one is a single column, and forcing its content
+     into column 2 created an implicit second column and pushed the card's
+     title to the right edge. */
+  tbody td:not(:first-child) > * { grid-column: 2; }
+
+  /* The header, put back beside its value. */
+  tbody td::before {
+    content: attr(data-label);
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* The first cell is the row's identity, so it gets the card's title
+     treatment rather than a label of its own. */
+  tbody td:first-child {
+    grid-template-columns: 1fr;
+    padding-bottom: .45rem;
+    margin-bottom: .2rem;
+    border-bottom: 1px solid var(--line);
+    font-size: .9375rem;
+  }
+
+  tbody td:first-child::before { display: none; }
+
+  /* A cell holding only an action has no label worth showing. */
+  tbody td:empty { display: none; }
+
+  .filters {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    margin-bottom: .75rem;
+  }
+  .filters + .table-wrap { border-radius: 0; }
+}
+
+/* -- Phone: bottom bar ----------------------------------------------------- */
+
+.tabbar { display: none; }
+
+@media (max-width: 47.9375rem) {
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    background: rgba(255, 255, 255, .92);
+    backdrop-filter: saturate(1.4) blur(12px);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    border-top: 1px solid var(--line);
+    /* The home indicator sits below the bar on a notched phone; without this
+       the last row of targets is under it. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .tabbar__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .15rem;
+    /* 3.25rem before the safe area: comfortably above the 44px minimum. */
+    height: 3.25rem;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: .6875rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .tabbar__item--active { color: var(--red); }
+  .tabbar__item:focus-visible { outline: 2px solid var(--red); outline-offset: -2px; }
+
+  /* Room for the bar, so the last row of a list is not sitting under it. */
+  .content { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); }
+
+  /* The launcher clears the bar rather than overlapping it. */
+  .assistant-bubble,
+  .assistant { bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* -- Tablet: an icon rail, not a drawer ------------------------------------ */
+/*
+   A tablet has room for permanent navigation and no room for full labels
+   alongside content. The rail keeps every destination one tap away — a drawer
+   here wastes the width that makes a tablet a tablet.
+*/
+@media (min-width: 48rem) and (max-width: 63.9375rem) {
+  .layout { display: flex; }
+
+  .sidenav {
+    position: static;
+    transform: none;
+    width: 4.25rem;
+    padding: .85rem .4rem;
+    box-shadow: none;
+  }
+
+  .sidenav__head,
+  .navgroup__title,
+  .navlink span { display: none; }
+
+  .navlink {
+    justify-content: center;
+    padding: .65rem 0;
+    border-radius: var(--r-md);
+  }
+
+  .navlink svg { font-size: 1.15rem; }
+
+  /* Without labels the groups need a rule to stay legible as groups. */
+  .navgroup + .navgroup {
+    margin-top: .6rem;
+    padding-top: .6rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .scrim { display: none !important; }
+  .topbar__menu { display: none; }
+}
+
+
+/* A pill is a single token — "31 Des 2027" breaking across two lines reads as
+   two values, and the row grows to fit a wrap that should never happen. */
+.pill,
+.count-chip,
+.status-select select { white-space: nowrap; }
+
+@media (min-width: 48rem) and (max-width: 63.9375rem) {
+  /* At tablet width the columns were squeezing rather than scrolling: names
+     wrapped mid-word and the status control clipped. Giving the table room and
+     letting it scroll inside its own box is the honest trade — a squeezed
+     column is unreadable, a scrolled one is merely offscreen. */
+  table { min-width: 48rem; }
+  th, td { padding: .55rem .7rem; }
 }

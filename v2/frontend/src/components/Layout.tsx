@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
 import Icon, { type IconName } from './Icon'
 import Assistant from './Assistant'
+import TabBar from './TabBar'
 
 interface NavItem {
   to: string
@@ -20,31 +21,74 @@ interface NavItem {
   roles?: string[]
 }
 
-const CHAPTER_NAV: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: 'chart', end: true },
-  { to: '/pipeline', label: 'Pipeline', icon: 'board' },
-  { to: '/visitors', label: 'Visitor', icon: 'users' },
-  { to: '/mcqa', label: 'MCQA', icon: 'check' },
-  { to: '/members', label: 'Member', icon: 'user' },
-  { to: '/guests', label: 'Guest', icon: 'users' },
-  { to: '/meetings', label: 'Meeting', icon: 'calendar' },
-  { to: '/wa-blast', label: 'WA Blast', icon: 'message' },
-  { to: '/text-format', label: 'Text Format', icon: 'clipboard' },
-  { to: '/transfer', label: 'Export/Import', icon: 'download' },
-  { to: '/activity', label: 'Log', icon: 'clock' },
-  { to: '/accounts', label: 'Akun', icon: 'settings', roles: ['admin', 'national_admin', 'chapter_admin'] },
-  { to: '/my-account', label: 'Profil', icon: 'user' },
+
+// Screens that read across every tenant. Hidden here and refused by the API —
+// the nav is a convenience, not the gate.
+
+interface NavSection {
+  // Absent on the first group: the top items need no heading to be understood,
+  // and a label above "Dashboard" is noise.
+  title?: string
+  items: NavItem[]
+}
+
+// Grouped rather than one list. A national admin sees nineteen destinations,
+// and as a flat column they read as an undifferentiated wall — the headings are
+// what let someone find "Policy" without reading all nineteen.
+const CHAPTER_NAV: NavSection[] = [
+  {
+    items: [
+      { to: '/', label: 'Dashboard', icon: 'chart', end: true },
+      { to: '/pipeline', label: 'Pipeline', icon: 'board' },
+    ],
+  },
+  {
+    title: 'Data',
+    items: [
+      { to: '/visitors', label: 'Visitor', icon: 'users' },
+      { to: '/mcqa', label: 'MCQA', icon: 'check' },
+      { to: '/members', label: 'Member', icon: 'user' },
+      { to: '/guests', label: 'Guest', icon: 'users' },
+      { to: '/meetings', label: 'Meeting', icon: 'calendar' },
+    ],
+  },
+  {
+    title: 'Komunikasi',
+    items: [
+      { to: '/wa-blast', label: 'WA Blast', icon: 'message' },
+      { to: '/text-format', label: 'Text Format', icon: 'clipboard' },
+    ],
+  },
+  {
+    title: 'Alat',
+    items: [
+      { to: '/transfer', label: 'Export/Import', icon: 'download' },
+      { to: '/activity', label: 'Log', icon: 'clock' },
+      { to: '/accounts', label: 'Akun', icon: 'settings', roles: ['admin', 'national_admin', 'chapter_admin'] },
+      { to: '/my-account', label: 'Profil', icon: 'user' },
+    ],
+  },
 ]
 
 // Screens that read across every tenant. Hidden here and refused by the API —
 // the nav is a convenience, not the gate.
-const NATIONAL_NAV: NavItem[] = [
-  { to: '/national', label: 'Nasional', icon: 'chart' },
-  { to: '/master', label: 'Master Wilayah', icon: 'map' },
-  { to: '/policies', label: 'Policy', icon: 'sliders' },
-  { to: '/governance', label: 'Audit', icon: 'shield' },
-  { to: '/api-keys', label: 'API Keys', icon: 'key' },
-  { to: '/api-docs', label: 'Dokumentasi API', icon: 'clipboard' },
+const NATIONAL_NAV: NavSection[] = [
+  {
+    title: 'Nasional',
+    items: [
+      { to: '/national', label: 'Ringkasan', icon: 'chart' },
+      { to: '/master', label: 'Master Wilayah', icon: 'map' },
+      { to: '/policies', label: 'Policy', icon: 'sliders' },
+      { to: '/governance', label: 'Audit', icon: 'shield' },
+    ],
+  },
+  {
+    title: 'Integrasi',
+    items: [
+      { to: '/api-keys', label: 'API Keys', icon: 'key' },
+      { to: '/api-docs', label: 'Dokumentasi API', icon: 'clipboard' },
+    ],
+  },
 ]
 
 export default function Layout() {
@@ -53,8 +97,16 @@ export default function Layout() {
   const location = useLocation()
 
   const isNational = user?.role === 'national_admin' || user?.role === 'admin'
+  // Filtered per item, then any section left empty is dropped — otherwise a
+  // heading could survive with nothing under it.
   const nav = (isNational ? [...CHAPTER_NAV, ...NATIONAL_NAV] : CHAPTER_NAV)
-    .filter(item => !item.roles || (user ? item.roles.includes(user.role) : false))
+    .map(section => ({
+      ...section,
+      items: section.items.filter(
+        item => !item.roles || (user ? item.roles.includes(user.role) : false),
+      ),
+    }))
+    .filter(section => section.items.length > 0)
 
   // Navigating must close the drawer, or a phone lands on the new page with the
   // menu still covering it.
@@ -122,17 +174,22 @@ export default function Layout() {
             </button>
           </div>
 
-          {nav.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              data-tour={`nav-${item.to}`}
-              className={({ isActive }) => `navlink${isActive ? ' navlink--active' : ''}`}
-            >
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </NavLink>
+          {nav.map((section, i) => (
+            <div className="navgroup" key={section.title ?? `g${i}`}>
+              {section.title && <p className="navgroup__title">{section.title}</p>}
+              {section.items.map(item => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  data-tour={`nav-${item.to}`}
+                  className={({ isActive }) => `navlink${isActive ? ' navlink--active' : ''}`}
+                >
+                  <Icon name={item.icon} />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -142,6 +199,9 @@ export default function Layout() {
 
         <Assistant />
       </div>
+
+      {/* Phone only. The drawer stays for everything the bar cannot hold. */}
+      <TabBar onMore={() => setDrawerOpen(true)} />
     </div>
   )
 }

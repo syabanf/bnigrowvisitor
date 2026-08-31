@@ -2,7 +2,21 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import StatusSelect from '../components/StatusSelect'
 import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
+
+// The pipeline reads left to right; only the ends are coloured. Tinting every
+// stage would make the list a rainbow in which nothing stands out.
+const VISITOR_TONE: Record<VisitorStatus, string> = {
+  new: 'pill--quiet',
+  followup: 'pill--warn',
+  confirmed: 'pill--quiet',
+  attended: 'pill--good',
+  no_show: 'pill--muted',
+  interview: 'pill--quiet',
+  member: 'pill--good',
+  not_continue: 'pill--muted',
+}
 
 export default function Visitors() {
   const [status, setStatus] = useState('')
@@ -36,7 +50,10 @@ export default function Visitors() {
 
   return (
     <>
-      <h1>Visitor</h1>
+      <div className="page-title">
+        <h1>Visitor</h1>
+        <span className="count-chip">{total.toLocaleString('id-ID')} visitor</span>
+      </div>
 
       <div className="filters">
         <input
@@ -68,26 +85,24 @@ export default function Visitors() {
             <tbody>
               {visitors.map(v => (
                 <tr key={v.id}>
-                  <td>
+                  <td data-label="Nama">
                     <strong>{v.name}</strong>
                     {v.company && <div className="muted small">{v.company}</div>}
                   </td>
-                  <td>
+                  <td data-label="Kontak">
                     {v.phone}
                     {v.email && <div className="muted small">{v.email}</div>}
                   </td>
-                  <td>{v.business_field || '—'}</td>
-                  <td>{v.pic_name || <span className="muted">Belum ada</span>}</td>
-                  <td>
-                    <select
+                  <td data-label="Bidang Usaha">{v.business_field || '—'}</td>
+                  <td data-label="PIC">{v.pic_name || <span className="muted">Belum ada</span>}</td>
+                  <td data-label="Status">
+                    <StatusSelect
                       value={pending[v.id] ?? v.status}
-                      onChange={e => void changeStatus(v, e.target.value as VisitorStatus)}
-                      aria-label={`Status ${v.name}`}
-                    >
-                      {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
+                      options={STATUS_LABEL}
+                      label={`Status ${v.name}`}
+                      tone={s => VISITOR_TONE[s]}
+                      onChange={next => void changeStatus(v, next)}
+                    />
                   </td>
                 </tr>
               ))}

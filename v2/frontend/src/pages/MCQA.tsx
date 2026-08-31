@@ -47,7 +47,10 @@ export default function MCQA() {
 
   return (
     <>
-      <h1>MCQA</h1>
+      <div className="page-title">
+        <h1>MCQA</h1>
+        <span className="count-chip">{total.toLocaleString('id-ID')} visitor hadir</span>
+      </div>
       <p className="muted small">
         Hasil airtime visitor yang sudah hadir. Visitor yang belum hadir tidak muncul di sini —
         mencatat airtime untuk mereka akan merusak laporan.
@@ -61,7 +64,6 @@ export default function MCQA() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-      <p className="muted small">Menampilkan {items.length} dari {total} visitor hadir</p>
 
       <Table
         rows={items}

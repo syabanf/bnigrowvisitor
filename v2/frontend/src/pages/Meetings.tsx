@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import Table from '../components/Table'
+import { formatDate } from '../lib/format'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 
@@ -43,7 +44,10 @@ export default function Meetings() {
 
   return (
     <>
-      <h1>Weekly Meeting</h1>
+      <div className="page-title">
+        <h1>Weekly Meeting</h1>
+        <span className="count-chip">{total.toLocaleString('id-ID')} meeting</span>
+      </div>
 
       {error && <div className="alert">{error}</div>}
 
@@ -73,7 +77,6 @@ export default function Meetings() {
         </form>
       </section>
 
-      <p className="muted small">{total} meeting</p>
 
       <Table
         rows={items}
@@ -85,12 +88,16 @@ export default function Meetings() {
           {
             key: 'date', header: 'Tanggal',
             render: m => {
-              const date = m.meeting_date.slice(0, 10)
+              // Compared as ISO, shown formatted: string comparison on
+              // YYYY-MM-DD is exact and timezone-free, while "6 Sep 2026" is
+              // what the row should actually read.
+              const iso = m.meeting_date.slice(0, 10)
+              const shown = formatDate(m.meeting_date)
               // An upcoming meeting is what people are preparing for, so it is
               // worth distinguishing at a glance.
-              return date >= today
-                ? <span className="pill pill--warn">{date} · akan datang</span>
-                : date
+              return iso >= today
+                ? <span className="pill pill--warn">{shown} · akan datang</span>
+                : shown
             },
           },
           { key: 'loc', header: 'Lokasi', render: m => m.location || '—' },

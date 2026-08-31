@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api/client'
+import { formatDate, daysUntil } from '../lib/format'
+import StatusSelect from '../components/StatusSelect'
 import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
@@ -21,12 +23,20 @@ const STATUS_LABEL: Record<Member['status'], string> = {
   suspended: 'Suspended',
 }
 
+// Active is deliberately the quiet one: on a list where most rows are active,
+// colouring them all makes the two that are not disappear.
+const MEMBER_TONE: Record<Member['status'], string> = {
+  active: 'pill--quiet',
+  inactive: 'pill--muted',
+  suspended: 'pill--danger',
+}
+
 function renewalTone(date?: string): string {
-  if (!date) return ''
-  const days = (new Date(date).getTime() - Date.now()) / 86_400_000
+  const days = daysUntil(date)
+  if (days === null) return ''
   if (days < 0) return 'pill--danger'
   if (days < 30) return 'pill--warn'
-  return ''
+  return 'pill--quiet'
 }
 
 export default function Members() {
@@ -46,7 +56,10 @@ export default function Members() {
 
   return (
     <>
-      <h1>Member</h1>
+      <div className="page-title">
+        <h1>Member</h1>
+        <span className="count-chip">{total.toLocaleString('id-ID')} member</span>
+      </div>
 
       <div className="filters">
         <input
@@ -60,7 +73,6 @@ export default function Members() {
       </div>
 
       {error && <div className="alert">{error}</div>}
-      <p className="muted small">Menampilkan {items.length} dari {total} member</p>
 
       <Table
         rows={items}
@@ -92,7 +104,7 @@ export default function Members() {
             render: m =>
               m.renewal_date ? (
                 <span className={`pill ${renewalTone(m.renewal_date)}`}>
-                  {m.renewal_date.slice(0, 10)}
+                  {formatDate(m.renewal_date)}
                 </span>
               ) : (
                 <span className="muted">—</span>
@@ -101,13 +113,13 @@ export default function Members() {
           {
             key: 'status', header: 'Status',
             render: m => (
-              <select
+              <StatusSelect
                 value={m.status}
-                aria-label={`Status ${m.name}`}
-                onChange={e => void changeStatus(m, e.target.value as Member['status'])}
-              >
-                {Object.entries(STATUS_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-              </select>
+                options={STATUS_LABEL}
+                label={`Status ${m.name}`}
+                tone={v => MEMBER_TONE[v]}
+                onChange={next => void changeStatus(m, next)}
+              />
             ),
           },
         ]}

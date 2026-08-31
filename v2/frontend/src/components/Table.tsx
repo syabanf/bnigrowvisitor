@@ -22,7 +22,13 @@ export default function Table<T>({ rows, columns, loading, empty, rowKey }: Prop
         <tbody>
           {rows.map(row => (
             <tr key={rowKey(row)}>
-              {columns.map(c => <td key={c.key}>{c.render(row)}</td>)}
+              {/* The header travels with the cell so the phone layout can put
+                  it back: below the table breakpoint each row becomes a card
+                  and every value needs its own label, which a <th> in a
+                  scrolled-away header row cannot provide. */}
+              {columns.map(c => (
+                <td key={c.key} data-label={c.header}>{c.render(row)}</td>
+              ))}
             </tr>
           ))}
         </tbody>
