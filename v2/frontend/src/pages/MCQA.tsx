@@ -4,6 +4,7 @@ import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 import PageHeader from '../components/PageHeader'
+import { useMeetingOptions } from '../hooks/useOptions'
 
 interface McqaVisitor {
   id: string
@@ -24,9 +25,11 @@ interface Choice {
 
 export default function MCQA() {
   const [search, setSearch] = useState('')
+  const [meetingId, setMeetingId] = useState('')
+  const meetings = useMeetingOptions()
   const [choices, setChoices] = useState<Choice[]>([])
   const { items, total, loading, error, reload, setError, page, setPage, pageSize, setPageSize } =
-    useResource<McqaVisitor>('/mcqa', { q: search })
+    useResource<McqaVisitor>('/mcqa', { q: search, meetingId })
 
   // The labels come from the server so the UI cannot drift from the values the
   // API will accept.
@@ -59,7 +62,11 @@ export default function MCQA() {
           type="search" value={search} placeholder="Cari nama, perusahaan…"
           onChange={e => setSearch(e.target.value)}
         />
-      </div>
+              <select value={meetingId} onChange={e => setMeetingId(e.target.value)} aria-label="Filter meeting">
+          <option value="">Semua Meeting</option>
+          {meetings.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
+</div>
 
       {error && <div className="alert">{error}</div>}
 

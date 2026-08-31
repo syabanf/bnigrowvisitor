@@ -3,6 +3,7 @@ import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 import PageHeader from '../components/PageHeader'
+import { useMeetingOptions } from '../hooks/useOptions'
 
 interface Guest {
   id: string
@@ -20,7 +21,9 @@ interface Guest {
 
 export default function Guests() {
   const [search, setSearch] = useState('')
-  const { items, total, loading, error, page, setPage, pageSize, setPageSize } = useResource<Guest>('/guests', { q: search })
+  const [meetingId, setMeetingId] = useState('')
+  const meetings = useMeetingOptions()
+  const { items, total, loading, error, page, setPage, pageSize, setPageSize } = useResource<Guest>('/guests', { q: search, meetingId })
 
   return (
     <>
@@ -34,7 +37,11 @@ export default function Guests() {
           type="search" value={search} placeholder="Cari nama, telepon, perusahaan…"
           onChange={e => setSearch(e.target.value)}
         />
-      </div>
+              <select value={meetingId} onChange={e => setMeetingId(e.target.value)} aria-label="Filter meeting">
+          <option value="">Semua Meeting</option>
+          {meetings.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
+</div>
 
       {error && <div className="alert">{error}</div>}
 

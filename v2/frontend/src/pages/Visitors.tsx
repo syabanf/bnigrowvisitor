@@ -7,6 +7,8 @@ import SummaryCards from '../components/SummaryCards'
 import StatusSelect from '../components/StatusSelect'
 import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
 import PageHeader from '../components/PageHeader'
+import { useMeetingOptions, usePICOptions } from '../hooks/useOptions'
+import Icon from '../components/Icon'
 
 // The pipeline reads left to right; only the ends are coloured. Tinting every
 // stage would make the list a rainbow in which nothing stands out.
@@ -24,11 +26,15 @@ const VISITOR_TONE: Record<VisitorStatus, string> = {
 export default function Visitors() {
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
+  const [meetingId, setMeetingId] = useState('')
+  const [picId, setPicId] = useState('')
+  const meetings = useMeetingOptions()
+  const pics = usePICOptions()
   const {
     items: visitors, total, loading, error, reload: load, setError,
     page, setPage, pageSize, setPageSize, extra,
   } = useResource<Visitor, { by_status: Record<string, number> }>(
-    '/visitors', { status, q: search.trim() },
+    '/visitors', { status, q: search.trim(), meetingId, picId },
   )
 
   // From the server, over the whole filtered set. The breakdown deliberately
@@ -48,6 +54,14 @@ export default function Visitors() {
   ]
 
   const [pending, setPending] = useState<Record<string, VisitorStatus>>({})
+
+  // With four filters it is easy to combine your way to an empty list and not
+  // see which one did it. The reset appears only when something is applied, so
+  // it is never a dead control.
+  const filtered = Boolean(status || search.trim() || meetingId || picId)
+  const clearFilters = () => {
+    setStatus(''); setSearch(''); setMeetingId(''); setPicId('')
+  }
 
   const changeStatus = async (visitor: Visitor, next: VisitorStatus) => {
     // Optimistic: the row shows the new status immediately and is cleared by a
@@ -80,12 +94,25 @@ export default function Visitors() {
           type="search" value={search} placeholder="Cari nama, telepon, email, perusahaan…"
           onChange={e => setSearch(e.target.value)}
         />
-        <select value={status} onChange={e => setStatus(e.target.value)}>
+        <select value={status} onChange={e => setStatus(e.target.value)} aria-label="Filter status">
           <option value="">Semua Status</option>
           {Object.entries(STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
           ))}
         </select>
+        <select value={meetingId} onChange={e => setMeetingId(e.target.value)} aria-label="Filter meeting">
+          <option value="">Semua Meeting</option>
+          {meetings.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
+        <select value={picId} onChange={e => setPicId(e.target.value)} aria-label="Filter PIC">
+          <option value="">Semua PIC</option>
+          {pics.map(pic => <option key={pic.id} value={pic.id}>{pic.label}</option>)}
+        </select>
+        {filtered && (
+          <button type="button" className="btn btn--ghost filters__reset" onClick={clearFilters}>
+            <Icon name="close" size={0.9} /> Hapus filter
+          </button>
+        )}
       </div>
 
       {error && <div className="alert">{error}</div>}
@@ -93,7 +120,13 @@ export default function Visitors() {
       {loading ? (
         <Skeleton columns="2fr 1.5fr 1.5fr 1fr 1fr" />
       ) : visitors.length === 0 ? (
-        <p className="muted">Tidak ada visitor yang cocok.</p>
+        <div className="empty">
+          <Icon name="search" size={1.5} />
+          <p>Tidak ada visitor yang cocok dengan filter ini.</p>
+          {filtered && (
+            <button type="button" className="btn" onClick={clearFilters}>Hapus filter</button>
+          )}
+        </div>
       ) : (
         <div className="table-wrap">
           <table>

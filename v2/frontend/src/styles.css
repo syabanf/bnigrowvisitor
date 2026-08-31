@@ -1953,3 +1953,27 @@ tbody tr:nth-child(n+5) { animation-delay: 80ms; }
 }
 
 .funnel__share { text-align: right; font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+
+/* A filter bar can hold four controls plus a reset; it wraps rather than
+   squeezing them. */
+.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.filters > input[type="search"] { flex: 2 1 14rem; }
+.filters > select { flex: 1 1 10rem; min-width: 0; }
+.filters__reset { flex: none; }
+
+/* An empty result explains itself and offers the way out, rather than being a
+   grey sentence you have to work backwards from. */
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0 0 var(--r-xl) var(--r-xl);
+}
+
+.empty svg { color: var(--line-strong); }
+.empty p { margin: 0; font-size: 0.875rem; }
