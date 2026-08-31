@@ -91,6 +91,15 @@ const NATIONAL_NAV: NavSection[] = [
   },
 ]
 
+// Roles as people describe themselves, not as the database stores them.
+const ROLE_TITLE: Record<string, string> = {
+  admin: 'Super Admin',
+  national_admin: 'National Admin',
+  chapter_admin: 'Chapter Admin',
+  pic: 'PIC',
+  member: 'Member',
+}
+
 export default function Layout() {
   const { user, logout } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -122,6 +131,20 @@ export default function Layout() {
 
   const startTour = () => window.dispatchEvent(new Event('bni:start-tour'))
 
+  // The topbar names the current page. Taken from the nav rather than kept as a
+  // second list: a title that can disagree with the menu is worse than none.
+  // Longest match first, so /api-keys does not answer for /api-docs.
+  const current = nav
+    .flatMap(section => section.items)
+    .filter(item => item.end ? location.pathname === item.to : location.pathname.startsWith(item.to))
+    .sort((a, b) => b.to.length - a.to.length)[0]
+
+  // Initials for the avatar. Two words at most — three letters in a circle
+  // stops being readable at this size.
+  const initials = (user?.name ?? '')
+    .split(/\s+/).filter(Boolean).slice(0, 2)
+    .map(word => word[0]?.toUpperCase() ?? '').join('')
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -134,21 +157,15 @@ export default function Layout() {
           <Icon name="menu" size={1.15} />
         </button>
 
-        <div className="topbar__brand">
-          <strong>BNI Visitor</strong>
-          <span className="muted small">
-            {user?.chapter_name ?? 'Semua chapter'} · {user?.name}
-          </span>
-        </div>
+        {/* The page name, not the product name. The product is named in the
+            sidebar, where it stays put; the topbar is the one place that can
+            say which screen you are looking at once the page has scrolled. */}
+        <h2 className="topbar__page">{current?.label ?? 'BNI Visitor'}</h2>
 
         <div className="topbar__actions">
-          <button className="btn btn--ghost" onClick={startTour}>
+          <button className="btn btn--pill" onClick={startTour}>
             <Icon name="help" />
             <span className="hide-sm">Tour</span>
-          </button>
-          <button className="btn btn--ghost" onClick={() => void logout()}>
-            <Icon name="logout" />
-            <span className="hide-sm">Keluar</span>
           </button>
         </div>
       </header>
@@ -163,6 +180,13 @@ export default function Layout() {
         />
 
         <nav className="sidenav" aria-label="Menu utama">
+          {/* Product identity lives with the navigation, which is the part of
+              the screen that never changes. */}
+          <div className="sidenav__brand">
+            <strong>BNI Visitor</strong>
+            <span>{user?.chapter_name ?? 'Semua chapter'}</span>
+          </div>
+
           <div className="sidenav__head">
             <span className="sidenav__title">Menu</span>
             <button
@@ -174,6 +198,10 @@ export default function Layout() {
             </button>
           </div>
 
+          {/* Only the menu scrolls. The brand above and the account below stay
+              put — an account block that scrolls out of reach is the one thing
+              in a sidebar people go looking for. */}
+          <div className="sidenav__scroll">
           {nav.map((section, i) => (
             <div className="navgroup" key={section.title ?? `g${i}`}>
               {section.title && <p className="navgroup__title">{section.title}</p>}
@@ -191,6 +219,24 @@ export default function Layout() {
               ))}
             </div>
           ))}
+          </div>
+
+          {/* Who you are signed in as, pinned to the foot. It was in the topbar,
+              squeezed beside the product name and the page name; here it has
+              room and sits where an account menu is looked for. */}
+          <div className="sidenav__user">
+            <span className="avatar" aria-hidden="true">{initials || '—'}</span>
+            <span className="sidenav__who">
+              <strong>{user?.name}</strong>
+              <span>{ROLE_TITLE[user?.role ?? ''] ?? user?.role}</span>
+            </span>
+            <button
+              className="btn btn--ghost btn--icon sidenav__signout"
+              onClick={() => void logout()}
+            >
+              <Icon name="logout" label="Keluar" />
+            </button>
+          </div>
         </nav>
 
         <main className="content">
