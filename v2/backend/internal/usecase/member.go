@@ -62,16 +62,19 @@ func (uc *MemberUsecase) Get(ctx context.Context, scope domain.Scope, id string)
 	return m, nil
 }
 
+// Optional fields are pointers so an absent one leaves its value alone. They
+// were plain strings assigned unconditionally on update, so a status change
+// cleared the rest of the record.
 type MemberInput struct {
 	Name          string
-	Phone         string
-	Email         string
-	BusinessField string
-	Company       string
+	Phone         *string
+	Email         *string
+	BusinessField *string
+	Company       *string
 	JoinedDate    *time.Time
 	RenewalDate   *time.Time
 	Status        string
-	Notes         string
+	Notes         *string
 	ChapterID     string
 }
 
@@ -95,10 +98,10 @@ func (uc *MemberUsecase) Create(ctx context.Context, scope domain.Scope, actor A
 	}
 
 	m := &domain.Member{
-		ChapterID: chapterID, Name: name, Phone: strings.TrimSpace(in.Phone),
-		Email: strings.TrimSpace(in.Email), BusinessField: in.BusinessField,
-		Company: in.Company, JoinedDate: in.JoinedDate, RenewalDate: in.RenewalDate,
-		Status: status, Notes: in.Notes,
+		ChapterID: chapterID, Name: name, Phone: strings.TrimSpace(deref(in.Phone)),
+		Email: strings.TrimSpace(deref(in.Email)), BusinessField: deref(in.BusinessField),
+		Company: deref(in.Company), JoinedDate: in.JoinedDate, RenewalDate: in.RenewalDate,
+		Status: status, Notes: deref(in.Notes),
 	}
 	if err := uc.members.Create(ctx, m); err != nil {
 		return nil, err
@@ -123,11 +126,23 @@ func (uc *MemberUsecase) Update(ctx context.Context, scope domain.Scope, actor A
 		}
 		existing.Status = status
 	}
-	existing.Phone = in.Phone
-	existing.Email = in.Email
-	existing.BusinessField = in.BusinessField
-	existing.Company = in.Company
-	existing.Notes = in.Notes
+	// Only what was sent is changed. These were assigned unconditionally, so a
+	// caller sending just a status cleared the rest of the record with it.
+	if in.Phone != nil {
+		existing.Phone = *in.Phone
+	}
+	if in.Email != nil {
+		existing.Email = *in.Email
+	}
+	if in.BusinessField != nil {
+		existing.BusinessField = *in.BusinessField
+	}
+	if in.Company != nil {
+		existing.Company = *in.Company
+	}
+	if in.Notes != nil {
+		existing.Notes = *in.Notes
+	}
 	if in.JoinedDate != nil {
 		existing.JoinedDate = in.JoinedDate
 	}

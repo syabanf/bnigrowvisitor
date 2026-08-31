@@ -33,17 +33,26 @@ func (h *MemberHandler) List(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, result)
 }
 
+// Optional fields are pointers, and read-only ones are accepted and discarded,
+// for the same reasons as visitorRequest: an absent field must leave its value
+// alone, and a client must be able to send back a row it just read.
 type memberRequest struct {
-	Name          string `json:"name"`
-	Phone         string `json:"phone"`
-	Email         string `json:"email"`
-	BusinessField string `json:"business_field"`
-	Company       string `json:"company"`
-	JoinedDate    string `json:"joined_date"`
-	RenewalDate   string `json:"renewal_date"`
-	Status        string `json:"status"`
-	Notes         string `json:"notes"`
-	ChapterID     string `json:"chapter_id"`
+	Name          string  `json:"name"`
+	Phone         *string `json:"phone"`
+	Email         *string `json:"email"`
+	BusinessField *string `json:"business_field"`
+	Company       *string `json:"company"`
+	JoinedDate    string  `json:"joined_date"`
+	RenewalDate   string  `json:"renewal_date"`
+	Status        string  `json:"status"`
+	Notes         *string `json:"notes"`
+	ChapterID     string  `json:"chapter_id"`
+
+	ID            string  `json:"id"`
+	ChapterName   string  `json:"chapter_name"`
+	LastRenewedAt *string `json:"last_renewed_at"`
+	CreatedAt     string  `json:"created_at"`
+	UpdatedAt     string  `json:"updated_at"`
 }
 
 func (req memberRequest) toInput() usecase.MemberInput {

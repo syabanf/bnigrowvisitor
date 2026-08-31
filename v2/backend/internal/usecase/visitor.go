@@ -72,19 +72,32 @@ func (uc *VisitorUsecase) Get(ctx context.Context, scope domain.Scope, id string
 	return v, nil
 }
 
+// VisitorInput carries a change. The optional fields are pointers so that
+// "absent" and "set to empty" are different things.
+//
+// They used to be plain strings, assigned unconditionally on update — so a
+// caller sending only a status silently blanked the email, company, notes and
+// PIC. The list screen worked around that by sending the whole row back, which
+// then failed the unknown-field check because a read carries fields a write
+// does not accept. Both symptoms, one cause.
 type VisitorInput struct {
 	Name          string
 	Phone         string
-	Email         string
-	BusinessField string
-	Company       string
-	Gender        string
-	ReferralName  string
+	Email         *string
+	BusinessField *string
+	Company       *string
+	Gender        *string
+	ReferralName  *string
 	MeetingID     *string
 	PICID         *string
 	Status        string
-	Notes         string
+	Notes         *string
 	ChapterID     string
+
+	// Explicitly clears the meeting or PIC when true, which a nil pointer
+	// cannot express on its own.
+	ClearMeeting bool
+	ClearPIC     bool
 
 	AttendedChoiceNumber *int
 }
@@ -109,11 +122,18 @@ func (uc *VisitorUsecase) Create(ctx context.Context, scope domain.Scope, actor 
 		return nil, domain.ErrValidation
 	}
 
+	// On create, an absent optional field is simply empty — there is nothing to
+	// preserve, so the pointer distinction that matters on update does not
+	// apply here.
 	v := &domain.Visitor{
-		ChapterID: chapterID, Name: name, Phone: phone, Email: strings.TrimSpace(in.Email),
-		BusinessField: in.BusinessField, Company: in.Company, Gender: in.Gender,
-		ReferralName: in.ReferralName, MeetingID: in.MeetingID, PICID: in.PICID,
-		Status: status, Notes: in.Notes,
+		ChapterID: chapterID, Name: name, Phone: phone,
+		Email:         strings.TrimSpace(deref(in.Email)),
+		BusinessField: deref(in.BusinessField),
+		Company:       deref(in.Company),
+		Gender:        deref(in.Gender),
+		ReferralName:  deref(in.ReferralName),
+		MeetingID:     in.MeetingID, PICID: in.PICID,
+		Status: status, Notes: deref(in.Notes),
 	}
 	if actor.ID != "" {
 		v.CreatedBy = &actor.ID
@@ -146,14 +166,31 @@ func (uc *VisitorUsecase) Update(ctx context.Context, scope domain.Scope, actor 
 		}
 		existing.Status = status
 	}
-	existing.Email = in.Email
-	existing.BusinessField = in.BusinessField
-	existing.Company = in.Company
-	existing.Gender = in.Gender
-	existing.ReferralName = in.ReferralName
-	existing.Notes = in.Notes
-	existing.MeetingID = in.MeetingID
-	existing.PICID = in.PICID
+	// Only what was sent is changed.
+	if in.Email != nil {
+		existing.Email = *in.Email
+	}
+	if in.BusinessField != nil {
+		existing.BusinessField = *in.BusinessField
+	}
+	if in.Company != nil {
+		existing.Company = *in.Company
+	}
+	if in.Gender != nil {
+		existing.Gender = *in.Gender
+	}
+	if in.ReferralName != nil {
+		existing.ReferralName = *in.ReferralName
+	}
+	if in.Notes != nil {
+		existing.Notes = *in.Notes
+	}
+	if in.MeetingID != nil || in.ClearMeeting {
+		existing.MeetingID = in.MeetingID
+	}
+	if in.PICID != nil || in.ClearPIC {
+		existing.PICID = in.PICID
+	}
 	if in.AttendedChoiceNumber != nil {
 		if label, known := domain.AirtimeChoice[*in.AttendedChoiceNumber]; known {
 			existing.AttendedChoiceNumber = in.AttendedChoiceNumber
@@ -242,4 +279,12 @@ func (uc *VisitorUsecase) ConfirmAttendance(ctx context.Context, id string) (*do
 	uc.audit.record(ctx, Actor{Name: visitor.Name, Role: "visitor"},
 		visitor.ChapterID, "update", "konfirmasi", visitor.ID, visitor.Name)
 	return visitor, true, nil
+}
+
+// deref reads an optional string, treating absent as empty.
+func deref(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
 }

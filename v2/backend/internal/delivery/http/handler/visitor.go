@@ -60,19 +60,42 @@ func (h *VisitorHandler) Get(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, map[string]any{"data": v})
 }
 
+// Optional fields are pointers so an absent one is distinguishable from one
+// sent empty. On update that is the difference between leaving a value alone and
+// clearing it — sending only a status used to blank the email, company and
+// notes along with it.
+//
+// Fields a read returns but a write does not accept are declared and ignored.
+// The decoder rejects unknown fields, which is right — a mistyped name should
+// not be silently dropped — but it meant the list screen could not send a row
+// back the way it had received it, and changing a status from the list returned
+// 400 every time.
 type visitorRequest struct {
 	Name          string  `json:"name"`
 	Phone         string  `json:"phone"`
-	Email         string  `json:"email"`
-	BusinessField string  `json:"business_field"`
-	Company       string  `json:"company"`
-	Gender        string  `json:"gender"`
-	ReferralName  string  `json:"referral_name"`
+	Email         *string `json:"email"`
+	BusinessField *string `json:"business_field"`
+	Company       *string `json:"company"`
+	Gender        *string `json:"gender"`
+	ReferralName  *string `json:"referral_name"`
 	MeetingID     *string `json:"meeting_id"`
 	PICID         *string `json:"pic_id"`
 	Status        string  `json:"status"`
-	Notes         string  `json:"notes"`
+	Notes         *string `json:"notes"`
 	ChapterID     string  `json:"chapter_id"`
+
+	// Read-only, accepted and discarded so a client may echo a row back.
+	ID          string  `json:"id"`
+	ChapterName string  `json:"chapter_name"`
+	MeetingName string  `json:"meeting_name"`
+	MeetingDate *string `json:"meeting_date"`
+	PICName     string  `json:"pic_name"`
+	CreatedBy   *string `json:"created_by"`
+	CreatedAt   string  `json:"created_at"`
+	UpdatedAt   string  `json:"updated_at"`
+
+	AttendedChoiceNumber *int   `json:"attended_choice_number"`
+	AttendedChoiceNote   string `json:"attended_choice_note"`
 }
 
 func (r visitorRequest) toInput() usecase.VisitorInput {
