@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
+import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 import { STATUS_LABEL, type ListResult, type Visitor, type VisitorStatus } from '../api/types'
 
@@ -67,7 +68,7 @@ export default function Pipeline() {
 
       {error && <div className="alert">{error}</div>}
       {loading ? (
-        <p className="muted">Memuat…</p>
+        <Skeleton rows={4} columns="1fr 1fr 1fr 1fr" />
       ) : (
         <div className="board">
           {COLUMNS.map(status => {

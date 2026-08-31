@@ -46,6 +46,15 @@
   --s-12: 3rem;
   --s-16: 4rem;
 
+  /* Motion. Three durations, because a hover and a panel sliding in are not
+     the same event: anything under 120ms reads as instant, anything over 320ms
+     reads as waiting. The easing decelerates — things arrive rather than
+     stopping dead. */
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-slow: 320ms;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+
   --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05);
   --shadow-2: 0 4px 16px rgba(16, 24, 40, 0.08);
   --shadow-3: 0 18px 48px rgba(16, 24, 40, 0.16);
@@ -1239,8 +1248,13 @@ td select { min-width: 0; }
   border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
 
+/* The skeleton stands in for the table, so it inherits the same attachment to
+   the filter bar above — otherwise the seam appears and disappears as the data
+   loads. */
 .filters + .table-wrap,
-.filters + .alert + .table-wrap { border-radius: 0 0 var(--r-xl) var(--r-xl); }
+.filters + .skeleton,
+.filters + .alert + .table-wrap,
+.filters + .alert + .skeleton { border-radius: 0 0 var(--r-xl) var(--r-xl); }
 
 
 /* ============================================================================
@@ -1438,4 +1452,146 @@ td select { min-width: 0; }
      column is unreadable, a scrolled one is merely offscreen. */
   table { min-width: 48rem; }
   th, td { padding: 0.5rem 0.75rem; }
+}
+
+
+/* ============================================================================
+   Motion and depth
+   ==========================================================================*/
+
+/* Everything that responds to a pointer says so. Without this the app is
+   correct and feels dead — a button that changes instantly gives no sense that
+   the press registered. */
+.btn,
+.demo-row,
+.stat--action,
+.chip,
+.navlink,
+.status-select select,
+.field-action,
+.code-block__copy {
+  transition:
+    background-color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease),
+    transform var(--t-fast) var(--ease);
+}
+
+/* A press moves the thing pressed. One pixel is enough to feel; more looks like
+   the layout is unstable. */
+.btn:active:not(:disabled),
+.demo-row:active:not(:disabled),
+.chip:active { transform: translateY(1px); }
+
+.btn--primary:hover:not(:disabled) { box-shadow: 0 2px 10px rgba(217, 23, 59, .25); }
+
+/* Cards lift very slightly under the pointer. The shadow does the work, not a
+   large translate — a card that jumps is distracting to read past. */
+.card,
+.stat {
+  transition: box-shadow var(--t-base) var(--ease), transform var(--t-base) var(--ease);
+}
+
+.stat--action:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+
+/* Inputs: the focus ring grows rather than snapping on. */
+input, select, textarea {
+  transition:
+    border-color var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
+}
+
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px rgba(217, 23, 59, .12);
+}
+
+/* The drawer slid with a linear default; easing it makes the panel feel
+   attached to the gesture rather than played back. */
+.sidenav { transition: transform var(--t-slow) var(--ease); }
+.scrim { transition: opacity var(--t-base) var(--ease); }
+
+/* Route changes fade the new page in from just below. Small and quick — a page
+   that animates for long is a page you are waiting for. */
+.content > * { animation: page-enter var(--t-base) var(--ease) both; }
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- Skeleton ----------------------------------------------------------- */
+
+.skeleton {
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+
+.skeleton__row {
+  display: grid;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background: var(--surface);
+}
+
+.skeleton__cell {
+  height: .7rem;
+  border-radius: 999px;
+  /* A sweep rather than a pulse: a block that fades in and out reads as
+     something broken, while a sweep reads as work in progress. */
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    rgba(23, 24, 28, .06) 37%,
+    var(--surface-2) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+
+/* Rows start their sweep slightly apart, so the table does not strobe as one
+   block. */
+.skeleton__row:nth-child(2) .skeleton__cell { animation-delay: .08s; }
+.skeleton__row:nth-child(3) .skeleton__cell { animation-delay: .16s; }
+.skeleton__row:nth-child(4) .skeleton__cell { animation-delay: .24s; }
+.skeleton__row:nth-child(n+5) .skeleton__cell { animation-delay: .32s; }
+
+@keyframes skeleton-sweep {
+  from { background-position: 100% 50%; }
+  to   { background-position: 0 50%; }
+}
+
+/* Visually hidden, still announced. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 47.9375rem) {
+  /* The card layout has no columns, so neither should its placeholder. */
+  .skeleton__row { grid-template-columns: 1fr !important; gap: .5rem; }
+  .skeleton__cell:nth-child(n+4) { display: none; }
+}
+
+/* All of the above is decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .demo-row, .stat--action, .chip, .navlink, .status-select select,
+  .field-action, .code-block__copy, .card, .stat, input, select, textarea,
+  .sidenav, .scrim { transition: none; }
+  .btn:active:not(:disabled),
+  .demo-row:active:not(:disabled),
+  .chip:active,
+  .stat--action:hover { transform: none; }
+  .content > * { animation: none; }
+  .skeleton__cell { animation: none; background: var(--surface-2); }
 }

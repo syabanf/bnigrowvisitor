@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import Skeleton from './Skeleton'
 
 interface Props<T> {
   rows: T[]
@@ -9,7 +10,11 @@ interface Props<T> {
 }
 
 export default function Table<T>({ rows, columns, loading, empty, rowKey }: Props<T>) {
-  if (loading) return <p className="muted">Memuat…</p>
+  // A skeleton in the table's own shape rather than a line of text, so the page
+  // is already the right size when the rows arrive.
+  if (loading) {
+    return <Skeleton columns={columns.map(() => '1fr').join(' ')} />
+  }
   if (rows.length === 0) return <p className="muted">{empty ?? 'Belum ada data.'}</p>
 
   return (

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api } from '../api/client'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import Skeleton from '../components/Skeleton'
 import StatusSelect from '../components/StatusSelect'
 import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
 
@@ -71,7 +72,7 @@ export default function Visitors() {
       {error && <div className="alert">{error}</div>}
 
       {loading ? (
-        <p className="muted">Memuat…</p>
+        <Skeleton columns="2fr 1.5fr 1.5fr 1fr 1fr" />
       ) : visitors.length === 0 ? (
         <p className="muted">Tidak ada visitor yang cocok.</p>
       ) : (
