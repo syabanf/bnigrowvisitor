@@ -239,3 +239,16 @@ func (h *GovernanceHandler) APIScopes(w http.ResponseWriter, r *http.Request) {
 	}
 	WriteJSON(w, http.StatusOK, map[string]any{"data": out})
 }
+
+// VisitorFrequency reports how often a phone has already completed a visit.
+//
+// Available to any signed-in user, not just national: the person entering a
+// visitor is the one who needs the answer, and they are usually a PIC.
+func (h *GovernanceHandler) VisitorFrequency(w http.ResponseWriter, r *http.Request) {
+	result, err := h.governance.CheckVisitorFrequency(r.Context(), r.URL.Query().Get("phone"))
+	if err != nil {
+		WriteError(w, err)
+		return
+	}
+	WriteJSON(w, http.StatusOK, result)
+}

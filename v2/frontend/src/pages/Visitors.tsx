@@ -9,6 +9,7 @@ import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
 import PageHeader from '../components/PageHeader'
 import { useMeetingOptions, usePICOptions } from '../hooks/useOptions'
 import Icon from '../components/Icon'
+import AddVisitorForm from '../components/AddVisitorForm'
 
 // The pipeline reads left to right; only the ends are coloured. Tinting every
 // stage would make the list a rainbow in which nothing stands out.
@@ -85,7 +86,11 @@ export default function Visitors() {
 
   return (
     <>
-      <PageHeader title="Visitor" count={`${total.toLocaleString('id-ID')} visitor`} />
+      <PageHeader
+        title="Visitor"
+        count={`${total.toLocaleString('id-ID')} visitor`}
+        actions={<AddVisitorForm onCreated={() => void load()} />}
+      />
 
       <SummaryCards cards={cards} active={status} onSelect={setStatus} />
 

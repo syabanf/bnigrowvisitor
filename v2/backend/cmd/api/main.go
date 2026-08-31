@@ -89,7 +89,7 @@ func run(logger *slog.Logger) error {
 	tenantUC := usecase.NewTenantUsecase(domains, chapters)
 	messagingUC := usecase.NewMessagingUsecase(templates, visitors, chapters, cfg.PublicBaseURL)
 	transferUC := usecase.NewTransferUsecase(visitors, members, chapters)
-	governanceUC := usecase.NewGovernanceUsecase(master, policies, apiKeys, governance)
+	governanceUC := usecase.NewGovernanceUsecase(master, policies, apiKeys, governance, governance)
 	narrationUC := usecase.NewNarrationUsecase(cfg.ElevenLabsKey, cfg.ElevenLabsVoiceID, cfg.ElevenLabsModelID)
 	assistantUC := usecase.NewAssistantUsecase(
 		llm.New(cfg.AIBaseURL, cfg.AIAPIKey, cfg.AIModel),

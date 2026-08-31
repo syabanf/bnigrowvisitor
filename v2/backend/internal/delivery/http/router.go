@@ -257,6 +257,10 @@ func NewRouter(
 				n.Post("/narration", h.Narration.Speak)
 			})
 
+			// Not under /policies: the check is used when adding a visitor, so a
+			// PIC needs it, and everything under that route is national-only.
+			private.Get("/visitor-frequency", h.Governance.VisitorFrequency)
+
 			private.Get("/pics", h.Account.ListPICs)
 			private.Post("/account/change-password", h.Account.ChangeOwnPassword)
 

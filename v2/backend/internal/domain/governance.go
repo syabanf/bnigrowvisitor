@@ -31,6 +31,10 @@ func ValidPolicyType(t string) bool {
 	return ok
 }
 
+type FrequencyRepository interface {
+	VisitorFrequency(ctx context.Context, phone string, limit, periodMonths int) (*VisitorFrequency, error)
+}
+
 type PolicyRepository interface {
 	List(ctx context.Context) ([]Policy, error)
 	Upsert(ctx context.Context, p *Policy) error
@@ -122,4 +126,27 @@ type LoginAuditFilter struct {
 	Outcome string
 	Limit   int
 	Offset  int
+}
+
+// VisitorFrequency is the answer to "has this person already visited too often".
+//
+// The rule lives in the visitor_frequency policy, which this app has stored and
+// displayed since the policies screen was built — and never once applied. A
+// limit nothing checks is a note, not a policy.
+type VisitorFrequency struct {
+	Phone        string       `json:"phone"`
+	Count        int          `json:"count"`
+	Limit        int          `json:"limit"`
+	PeriodMonths int          `json:"period_months"`
+	Exceeded     bool         `json:"exceeded"`
+	Visits       []PriorVisit `json:"visits"`
+}
+
+type PriorVisit struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ChapterName string `json:"chapter_name"`
+	Status      string `json:"status"`
+	MeetingName string `json:"meeting_name"`
+	CreatedAt   string `json:"created_at"`
 }

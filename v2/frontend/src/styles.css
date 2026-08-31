@@ -2114,3 +2114,17 @@ tbody tr:nth-child(n+5) { animation-delay: 80ms; }
 @media (prefers-reduced-motion: reduce) {
   .funnel-step__fill, .rankbar__fill { animation: none; }
 }
+
+
+/* A create form that opens in place, above the list it adds to — so the new row
+   appears where you were already looking. */
+.form-card { margin-bottom: 1rem; }
+.form-card .card__head { margin-bottom: 0.75rem; }
+
+.freq-list { margin: 0.375rem 0 0; padding-left: 1rem; font-size: 0.75rem; }
+.freq-list li { margin-bottom: 0.125rem; }
+
+/* The header's action slot holds the whole form once it is open, so it needs to
+   be able to take the full width rather than sitting in a corner. */
+.pagehead:has(.form-card) { display: block; }
+.pagehead:has(.form-card) .pagehead__actions { display: block; margin-top: 0.75rem; }

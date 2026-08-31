@@ -17,10 +17,11 @@ import (
 // GovernanceUsecase covers the national-only screens: master data, policies,
 // API keys and the login audit.
 type GovernanceUsecase struct {
-	master   domain.MasterRepository
-	policies domain.PolicyRepository
-	keys     domain.APIKeyRepository
-	audit    domain.GovernanceRepository
+	master    domain.MasterRepository
+	policies  domain.PolicyRepository
+	keys      domain.APIKeyRepository
+	audit     domain.GovernanceRepository
+	frequency domain.FrequencyRepository
 }
 
 func NewGovernanceUsecase(
@@ -28,8 +29,11 @@ func NewGovernanceUsecase(
 	policies domain.PolicyRepository,
 	keys domain.APIKeyRepository,
 	audit domain.GovernanceRepository,
+	frequency domain.FrequencyRepository,
 ) *GovernanceUsecase {
-	return &GovernanceUsecase{master: master, policies: policies, keys: keys, audit: audit}
+	return &GovernanceUsecase{
+		master: master, policies: policies, keys: keys, audit: audit, frequency: frequency,
+	}
 }
 
 // requireNational gates every method here. These screens read across every
@@ -231,4 +235,54 @@ func (uc *GovernanceUsecase) RecentLogins(ctx context.Context, role domain.Role,
 		return nil, err
 	}
 	return &LoginAuditPage{Data: logins, Total: total, Succeeded: succeeded, Failed: failed}, nil
+}
+
+// Defaults for the frequency rule, used when the policy row is missing or
+// malformed. The check should still work on a database nobody has configured.
+const (
+	defaultMaxVisits    = 3
+	defaultPeriodMonths = 6
+)
+
+// CheckVisitorFrequency answers whether a phone has already used up its visits.
+//
+// It reads the national default and ignores per-chapter overrides on purpose:
+// the point of the limit is that it holds across chapters, so letting one
+// chapter raise its own would be a way around it rather than a setting.
+func (uc *GovernanceUsecase) CheckVisitorFrequency(ctx context.Context, phone string) (*domain.VisitorFrequency, error) {
+	phone = strings.TrimSpace(phone)
+	if phone == "" {
+		return nil, fmt.Errorf("%w: nomor telepon wajib diisi", domain.ErrValidation)
+	}
+
+	maxVisits, periodMonths := defaultMaxVisits, defaultPeriodMonths
+	policies, err := uc.policies.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range policies {
+		// The national row only: ChapterID nil means it applies everywhere.
+		if p.PolicyType != "visitor_frequency" || p.ChapterID != nil {
+			continue
+		}
+		// Config is stored as raw JSON, so it is decoded rather than indexed.
+		// A malformed row falls back to the defaults instead of failing the
+		// check: refusing to answer would block adding a visitor over a
+		// settings problem.
+		var cfg struct {
+			MaxVisits    int `json:"max_visits"`
+			PeriodMonths int `json:"period_months"`
+		}
+		if err := json.Unmarshal(p.Config, &cfg); err != nil {
+			break
+		}
+		if cfg.MaxVisits > 0 {
+			maxVisits = cfg.MaxVisits
+		}
+		if cfg.PeriodMonths > 0 {
+			periodMonths = cfg.PeriodMonths
+		}
+	}
+
+	return uc.frequency.VisitorFrequency(ctx, phone, maxVisits, periodMonths)
 }
