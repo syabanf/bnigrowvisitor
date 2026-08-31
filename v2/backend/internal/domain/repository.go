@@ -50,6 +50,12 @@ type VisitorFilter struct {
 type VisitorRepository interface {
 	List(ctx context.Context, scope Scope, filter VisitorFilter) ([]Visitor, error)
 	Count(ctx context.Context, scope Scope, filter VisitorFilter) (int, error)
+
+	// StatusCounts breaks the filtered set down by status, so a summary above
+	// the list describes the same rows the list is showing. Counting the page
+	// in the browser instead would report fifty rows as if they were the whole
+	// chapter.
+	StatusCounts(ctx context.Context, scope Scope, filter VisitorFilter) (map[string]int, error)
 	FindByID(ctx context.Context, id string) (*Visitor, error)
 	Create(ctx context.Context, v *Visitor) error
 	Update(ctx context.Context, v *Visitor) error
@@ -85,6 +91,11 @@ type MemberFilter struct {
 type MemberRepository interface {
 	List(ctx context.Context, scope Scope, filter MemberFilter) ([]Member, error)
 	Count(ctx context.Context, scope Scope, filter MemberFilter) (int, error)
+
+	// StatusCounts as above, plus the two renewal buckets the member screen
+	// colours rows by — overdue and due within thirty days. Derived from the
+	// date on read rather than stored, so they cannot disagree with it.
+	StatusCounts(ctx context.Context, scope Scope, filter MemberFilter) (map[string]int, error)
 	FindByID(ctx context.Context, id string) (*Member, error)
 	Create(ctx context.Context, m *Member) error
 	Update(ctx context.Context, m *Member) error

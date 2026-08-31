@@ -1654,6 +1654,7 @@ tbody tr:nth-child(n+5) { animation-delay: 80ms; }
   .assistant,
   tbody tr { animation: none; }
   .tabbar__item { transition: none; }
+  .topbar__page { animation: none; }
   .skeleton__cell { animation: none; background: var(--surface-2); }
 }
 
@@ -1687,6 +1688,7 @@ tbody tr:nth-child(n+5) { animation-delay: 80ms; }
 
 .topbar__page {
   margin: 0;
+  animation: page-enter var(--t-base) var(--ease) both;
   font-size: 1rem;
   font-weight: 650;
   letter-spacing: -0.01em;
@@ -1777,3 +1779,61 @@ tbody tr:nth-child(n+5) { animation-delay: 80ms; }
   .pagehead { flex-direction: column; align-items: stretch; }
   .pagehead__actions .btn { flex: 1; justify-content: center; }
 }
+
+
+/* ---- Summary cards ------------------------------------------------------ */
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.summary__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  text-align: left;
+  font: inherit;
+}
+
+.summary__card--action { cursor: pointer; }
+.summary__card--action:hover { border-color: var(--line-strong); }
+.summary__card--action:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+.summary__card--on {
+  border-color: var(--red);
+  box-shadow: inset 0 0 0 1px var(--red);
+}
+
+.summary__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.summary__value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tone is applied to the figure alone. Colouring the whole card makes a row of
+   them read as a warning even when only one of them is one. */
+.summary__value.pill--good { background: none; color: var(--good); }
+.summary__value.pill--warn { background: none; color: var(--warn); }
+.summary__value.pill--danger { background: none; color: var(--danger); }
+
+.summary__hint { font-size: 0.7rem; color: var(--muted); }

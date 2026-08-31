@@ -49,6 +49,52 @@ func memberConditions(scope domain.Scope, f domain.MemberFilter) (string, []any)
 	return " WHERE " + strings.Join(where, " AND "), args
 }
 
+// StatusCounts ignores filter.Status for the same reason the visitor version
+// does: the breakdown is the control for that filter.
+//
+// The renewal buckets come from the date rather than a stored flag, so a member
+// whose renewal passed overnight is overdue on the next read without anything
+// having to update them.
+func (r *MemberRepository) StatusCounts(ctx context.Context, scope domain.Scope, f domain.MemberFilter) (map[string]int, error) {
+	f.Status = ""
+	clause, args := memberConditions(scope, f)
+
+	out := make(map[string]int)
+	rows, err := r.db.Query(ctx,
+		`SELECT m.status::text, COUNT(*)`+memberJoins+clause+` GROUP BY m.status`, args...)
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var status string
+		var n int
+		if err := rows.Scan(&status, &n); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		out[status] = n
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	var overdue, dueSoon int
+	err = r.db.QueryRow(ctx, `
+		SELECT
+		  COUNT(*) FILTER (WHERE m.renewal_date IS NOT NULL AND m.renewal_date < now()),
+		  COUNT(*) FILTER (WHERE m.renewal_date IS NOT NULL
+		                     AND m.renewal_date >= now()
+		                     AND m.renewal_date < now() + interval '30 days')`+
+		memberJoins+clause, args...).Scan(&overdue, &dueSoon)
+	if err != nil {
+		return nil, err
+	}
+	out["__overdue"] = overdue
+	out["__due_soon"] = dueSoon
+	return out, nil
+}
+
 func (r *MemberRepository) List(ctx context.Context, scope domain.Scope, f domain.MemberFilter) ([]domain.Member, error) {
 	clause, args := memberConditions(scope, f)
 	args = append(args, f.Limit, f.Offset)

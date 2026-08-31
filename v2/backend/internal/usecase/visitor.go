@@ -26,6 +26,9 @@ func NewVisitorUsecase(
 type ListVisitorsResult struct {
 	Data  []domain.Visitor `json:"data"`
 	Total int              `json:"total"`
+	// Counts for the whole filtered set, so a summary above the list describes
+	// the same rows the list is showing rather than the page on screen.
+	ByStatus map[string]int `json:"by_status"`
 }
 
 func (uc *VisitorUsecase) List(ctx context.Context, scope domain.Scope, filter domain.VisitorFilter) (*ListVisitorsResult, error) {
@@ -48,7 +51,11 @@ func (uc *VisitorUsecase) List(ctx context.Context, scope domain.Scope, filter d
 	if err != nil {
 		return nil, err
 	}
-	return &ListVisitorsResult{Data: items, Total: total}, nil
+	byStatus, err := uc.visitors.StatusCounts(ctx, scope, filter)
+	if err != nil {
+		return nil, err
+	}
+	return &ListVisitorsResult{Data: items, Total: total, ByStatus: byStatus}, nil
 }
 
 func (uc *VisitorUsecase) Get(ctx context.Context, scope domain.Scope, id string) (*domain.Visitor, error) {

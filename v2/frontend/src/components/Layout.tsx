@@ -121,6 +121,17 @@ export default function Layout() {
   // menu still covering it.
   useEffect(() => setDrawerOpen(false), [location.pathname])
 
+  // And it must return to the top. A single-page app keeps the scroll position
+  // across a route change, so leaving a list halfway down dropped you into the
+  // middle of the next one with its heading off-screen — measured at 800px into
+  // a page you had never seen.
+  //
+  // Jumps rather than scrolls: an animated scroll from deep in one list to the
+  // top of another is a long journey through content that is already gone.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
+  }, [location.pathname])
+
   // Escape closes it too; a drawer with no visible way out traps keyboard users.
   useEffect(() => {
     if (!drawerOpen) return

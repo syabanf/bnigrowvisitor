@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
 import Skeleton from '../components/Skeleton'
+import SummaryCards from '../components/SummaryCards'
 import StatusSelect from '../components/StatusSelect'
 import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
 import PageHeader from '../components/PageHeader'
@@ -25,8 +26,26 @@ export default function Visitors() {
   const [search, setSearch] = useState('')
   const {
     items: visitors, total, loading, error, reload: load, setError,
-    page, setPage, pageSize, setPageSize,
-  } = useResource<Visitor>('/visitors', { status, q: search.trim() })
+    page, setPage, pageSize, setPageSize, extra,
+  } = useResource<Visitor, { by_status: Record<string, number> }>(
+    '/visitors', { status, q: search.trim() },
+  )
+
+  // From the server, over the whole filtered set. The breakdown deliberately
+  // ignores the status filter it drives, so selecting one does not zero the
+  // others and leave no way back.
+  const by = extra?.by_status ?? {}
+  // Summed from the breakdown, not taken from total: total is the filtered
+  // count, so binding "Semua" to it made the card shrink to match whichever
+  // status was selected — showing 11 of 11 instead of 11 of 61, and hiding what
+  // you were filtering from.
+  const allCount = Object.values(by).reduce((a, b) => a + b, 0)
+  const cards = [
+    { key: '', label: 'Semua', value: allCount, icon: 'users' as const },
+    { key: 'followup', label: 'Follow Up', value: by.followup ?? 0, icon: 'clock' as const, tone: 'pill--warn' },
+    { key: 'attended', label: 'Hadir', value: by.attended ?? 0, icon: 'check' as const, tone: 'pill--good' },
+    { key: 'member', label: 'Jadi Member', value: by.member ?? 0, icon: 'user' as const, tone: 'pill--good' },
+  ]
 
   const [pending, setPending] = useState<Record<string, VisitorStatus>>({})
 
@@ -53,6 +72,8 @@ export default function Visitors() {
   return (
     <>
       <PageHeader title="Visitor" count={`${total.toLocaleString('id-ID')} visitor`} />
+
+      <SummaryCards cards={cards} active={status} onSelect={setStatus} />
 
       <div className="filters">
         <input

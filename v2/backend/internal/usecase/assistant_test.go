@@ -46,6 +46,9 @@ func (s *stubVisitors) Count(_ context.Context, scope domain.Scope, _ domain.Vis
 	s.sawScope = scope
 	return len(s.list), nil
 }
+func (s *stubVisitors) StatusCounts(context.Context, domain.Scope, domain.VisitorFilter) (map[string]int, error) {
+	return map[string]int{}, nil
+}
 func (s *stubVisitors) FindByID(context.Context, string) (*domain.Visitor, error) {
 	return nil, domain.ErrNotFound
 }
@@ -60,6 +63,9 @@ func (stubMembers) List(context.Context, domain.Scope, domain.MemberFilter) ([]d
 }
 func (stubMembers) Count(context.Context, domain.Scope, domain.MemberFilter) (int, error) {
 	return 0, nil
+}
+func (stubMembers) StatusCounts(context.Context, domain.Scope, domain.MemberFilter) (map[string]int, error) {
+	return map[string]int{}, nil
 }
 func (stubMembers) FindByID(context.Context, string) (*domain.Member, error) {
 	return nil, domain.ErrNotFound

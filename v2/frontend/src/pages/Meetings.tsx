@@ -14,7 +14,8 @@ interface Meeting {
 }
 
 export default function Meetings() {
-  const { items, total, loading, error, reload, setError, page, setPage, pageSize, setPageSize } = useResource<Meeting>('/meetings', {})
+  const [search, setSearch] = useState('')
+  const { items, total, loading, error, reload, setError, page, setPage, pageSize, setPageSize } = useResource<Meeting>('/meetings', { q: search.trim() })
   const [form, setForm] = useState({ title: '', meeting_date: '', location: '' })
   const [saving, setSaving] = useState(false)
 
@@ -74,6 +75,12 @@ export default function Meetings() {
           </div>
         </form>
       </section>
+      <div className="filters">
+        <input
+          type="search" value={search} placeholder="Cari judul atau lokasi meeting…"
+          onChange={e => setSearch(e.target.value)} aria-label="Cari meeting"
+        />
+      </div>
 
 
       <Table

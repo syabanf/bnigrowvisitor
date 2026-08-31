@@ -24,8 +24,9 @@ func NewMemberUsecase(
 }
 
 type ListMembersResult struct {
-	Data  []domain.Member `json:"data"`
-	Total int             `json:"total"`
+	Data     []domain.Member `json:"data"`
+	Total    int             `json:"total"`
+	ByStatus map[string]int  `json:"by_status"`
 }
 
 func (uc *MemberUsecase) List(ctx context.Context, scope domain.Scope, filter domain.MemberFilter) (*ListMembersResult, error) {
@@ -43,7 +44,11 @@ func (uc *MemberUsecase) List(ctx context.Context, scope domain.Scope, filter do
 	if err != nil {
 		return nil, err
 	}
-	return &ListMembersResult{Data: items, Total: total}, nil
+	byStatus, err := uc.members.StatusCounts(ctx, scope, filter)
+	if err != nil {
+		return nil, err
+	}
+	return &ListMembersResult{Data: items, Total: total, ByStatus: byStatus}, nil
 }
 
 func (uc *MemberUsecase) Get(ctx context.Context, scope domain.Scope, id string) (*domain.Member, error) {

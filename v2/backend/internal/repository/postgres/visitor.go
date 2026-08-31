@@ -136,6 +136,32 @@ func (r *VisitorRepository) FindByID(ctx context.Context, id string) (*domain.Vi
 	return v, err
 }
 
+// StatusCounts ignores filter.Status on purpose: the breakdown is the control
+// for that filter, so it has to keep showing every bucket while one of them is
+// selected. Narrowing it by the filter it drives would collapse the rest to
+// zero and leave no way back.
+func (r *VisitorRepository) StatusCounts(ctx context.Context, scope domain.Scope, f domain.VisitorFilter) (map[string]int, error) {
+	f.Status = ""
+	clause, args := conditions(scope, f)
+	rows, err := r.db.Query(ctx,
+		`SELECT v.status::text, COUNT(*) FROM visitors v`+clause+` GROUP BY v.status`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var n int
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		out[status] = n
+	}
+	return out, rows.Err()
+}
+
 func (r *VisitorRepository) Create(ctx context.Context, v *domain.Visitor) error {
 	err := r.db.QueryRow(ctx, `
 		INSERT INTO visitors (chapter_id, name, phone, email, business_field, company,

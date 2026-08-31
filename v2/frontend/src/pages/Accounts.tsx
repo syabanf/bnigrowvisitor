@@ -23,6 +23,8 @@ function grantableRoles(actor?: Role): Role[] {
 }
 
 export default function Accounts() {
+  const [accSearch, setAccSearch] = useState('')
+  const [accRole, setAccRole] = useState('')
   const { user } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,6 +75,17 @@ export default function Accounts() {
     }
   }
 
+  // Filtered in the browser, which is correct here and only here: this endpoint
+  // returns every account in one response, so there is no page count for a
+  // client-side filter to disagree with. Every paginated list filters on the
+  // server instead.
+  const shown = users.filter(u => {
+    if (accRole && u.role !== accRole) return false
+    if (!accSearch.trim()) return true
+    const q = accSearch.trim().toLowerCase()
+    return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  })
+
   return (
     <>
       <PageHeader
@@ -122,8 +135,21 @@ export default function Accounts() {
         </form>
       </section>
 
+      <div className="filters">
+        <input
+          type="search" value={accSearch} placeholder="Cari nama atau email…"
+          onChange={e => setAccSearch(e.target.value)} aria-label="Cari akun"
+        />
+        <select value={accRole} onChange={e => setAccRole(e.target.value)} aria-label="Filter peran">
+          <option value="">Semua Peran</option>
+          <option value="chapter_admin">Chapter Admin</option>
+          <option value="pic">PIC</option>
+          <option value="member">Member</option>
+        </select>
+      </div>
+
       <Table
-        rows={users}
+        rows={shown}
         loading={loading}
         rowKey={u => u.id}
         empty="Belum ada akun."
