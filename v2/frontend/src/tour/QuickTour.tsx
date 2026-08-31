@@ -121,7 +121,7 @@ export default function QuickTour() {
   // Narrate. Cancelling on change is what stops a fast clicker stacking voices.
   useEffect(() => {
     if (!active || !step || muted) return
-    speak(`${step.title}. ${step.body}`)
+    speak(step.narration ?? `${step.title}. ${step.body}`)
     return () => cancelSpeech()
   }, [active, step, muted])
 
@@ -155,8 +155,17 @@ export default function QuickTour() {
 
   // Measure the card rather than reserving a fixed height: a long step body
   // overflows any guess and pushes the buttons below the fold.
+  //
+  // Only for anchored steps. A step with no anchor centres itself with
+  // translate(-50%, -50%), and overriding its top with a pixel value while
+  // leaving that transform in place pulled the card half its own height off the
+  // screen — the welcome step opened with its heading above the viewport.
   useLayoutEffect(() => {
     if (!active) return
+    if (!rect) {
+      setCardTop(null)
+      return
+    }
     const card = cardRef.current
     if (!card) return
     const height = card.getBoundingClientRect().height
@@ -173,7 +182,12 @@ export default function QuickTour() {
 
   let cardStyle: React.CSSProperties
   if (!rect) {
-    cardStyle = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+    cardStyle = {
+      top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+      // Taller than the viewport cannot be centred without hiding both ends;
+      // scrolling inside the card keeps the buttons at its foot reachable.
+      maxHeight: 'calc(100dvh - 2rem)', overflowY: 'auto',
+    }
   } else {
     const below = rect.top + rect.height + 16
     const fitsBelow = below + 220 < vh
@@ -195,13 +209,19 @@ export default function QuickTour() {
             width: rect.width + PADDING * 2,
             height: rect.height + PADDING * 2,
           }}
-        />
+        >
+          {/* Keyed so the settle pulse replays on each step. The spotlight
+              itself deliberately is not keyed — it has to survive the step
+              change to animate between targets rather than reappearing. */}
+          <span className="tour__ring" key={step.id} />
+        </div>
       ) : (
         <div className="tour__dim" />
       )}
 
       <div
         ref={cardRef}
+        key={step.id}
         className="tour__card"
         style={cardTop === null ? cardStyle : { ...cardStyle, top: cardTop }}
       >
@@ -216,7 +236,7 @@ export default function QuickTour() {
                 setMuted(next)
                 setMutedState(next)
                 if (next) cancelSpeech()
-                else speak(`${step.title}. ${step.body}`)
+                else speak(step.narration ?? `${step.title}. ${step.body}`)
               }}
             ><Icon name={muted ? 'volume-off' : 'volume-on'} /></button>
             <button className="btn btn--small" onClick={finish}>Lewati</button>

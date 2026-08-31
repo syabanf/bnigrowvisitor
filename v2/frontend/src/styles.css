@@ -641,26 +641,117 @@ td select { min-width: 0; }
    Quick tour
    ==========================================================================*/
 .tour { position: fixed; inset: 0; z-index: 2000; }
-.tour__dim { position: absolute; inset: 0; background: rgba(16, 24, 40, .6); }
+
+.tour__dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 40, .6);
+  animation: tour-fade .25s ease both;
+}
+
+/*
+   The spotlight is one element that moves between targets rather than
+   appearing and disappearing at each one. Moving it is what makes the tour
+   feel like a guide pointing at things; fading it in and out at each step just
+   makes the screen flash.
+
+   `transition: all` was doing that job badly — it animates box-shadow too,
+   which is a 9999px spread here, and the browser repaints the whole overlay
+   every frame. Naming the properties keeps it on the compositor's cheap path.
+*/
 .tour__spot {
-  position: absolute; border-radius: var(--r-md); pointer-events: none;
+  position: absolute;
+  border-radius: var(--r-md);
+  pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(16, 24, 40, .6);
-  outline: 2px solid var(--red); transition: all .2s ease;
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+  transition:
+    top .34s cubic-bezier(.22, 1, .36, 1),
+    left .34s cubic-bezier(.22, 1, .36, 1),
+    width .34s cubic-bezier(.22, 1, .36, 1),
+    height .34s cubic-bezier(.22, 1, .36, 1);
 }
+
+/* A single soft pulse when the spotlight settles, so the eye lands on the
+   right thing without the ring throbbing for the whole step. */
+.tour__ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--red);
+  pointer-events: none;
+  animation: tour-pulse 1.6s ease-out 2;
+}
+
 .tour__card {
-  position: absolute; width: 20rem; max-width: calc(100vw - 2rem);
-  background: var(--surface); border-radius: var(--r-xl);
-  padding: 1.25rem; box-shadow: var(--shadow-3);
+  position: absolute;
+  width: 20rem;
+  max-width: calc(100vw - 2rem);
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-3);
+  /* Rises into place rather than cutting in. The distance is small on purpose:
+     a card that flies across the screen is slower to read than one that was
+     nearly there already. */
+  animation: tour-rise .28s cubic-bezier(.22, 1, .36, 1) both;
 }
+
 .tour__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+
 .tour__step {
   font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--red);
+  font-variant-numeric: tabular-nums;
 }
+
+.tour__card h3 { animation: tour-rise .32s cubic-bezier(.22, 1, .36, 1) .04s both; }
+.tour__card p  { animation: tour-rise .32s cubic-bezier(.22, 1, .36, 1) .08s both; }
+
 .tour__progress { display: flex; gap: 0.25rem; margin: 1rem 0 0.125rem; }
-.tour__progress span { height: 3px; flex: 1; border-radius: 999px; background: var(--line-strong); }
+
+.tour__progress span {
+  height: 3px;
+  flex: 1;
+  border-radius: 999px;
+  background: var(--line-strong);
+  /* Fills left to right as the step advances, so the bar reads as progress
+     rather than as a row of lights switching on. */
+  transform-origin: left;
+  transition: background-color .3s ease;
+}
+
 .tour__progress span.on { background: var(--red); }
+
 .tour__actions { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 1rem; }
+
+@keyframes tour-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes tour-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes tour-pulse {
+  from { opacity: .7; transform: scale(1); }
+  to   { opacity: 0; transform: scale(1.06); }
+}
+
+/* Everything above is decoration. Someone who has asked their system to reduce
+   motion still needs the tour to work, so the spotlight jumps and the card
+   simply appears. */
+@media (prefers-reduced-motion: reduce) {
+  .tour__spot { transition: none; }
+  .tour__ring { animation: none; }
+  .tour__dim,
+  .tour__card,
+  .tour__card h3,
+  .tour__card p { animation: none; }
+}
 
 /* ============================================================================
    PWA standalone
