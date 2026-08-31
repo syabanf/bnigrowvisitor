@@ -1524,13 +1524,55 @@ input:focus, select:focus, textarea:focus {
 .scrim { transition: opacity var(--t-base) var(--ease); }
 
 /* Route changes fade the new page in from just below. Small and quick — a page
-   that animates for long is a page you are waiting for. */
+   that animates for long is a page you are waiting for.
+ *
+ * The first few blocks arrive in sequence rather than together. A page whose
+ * header, filters and table all appear on the same frame reads as a jump cut;
+ * a short stagger reads as the page assembling. It stops after four, so a long
+ * page does not take a second to finish arriving.
+ */
 .content > * { animation: page-enter var(--t-base) var(--ease) both; }
+.content > *:nth-child(2) { animation-delay: 40ms; }
+.content > *:nth-child(3) { animation-delay: 80ms; }
+.content > *:nth-child(n+4) { animation-delay: 120ms; }
 
 @keyframes page-enter {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: none; }
 }
+
+/* The active marker grows into place rather than blinking from one item to the
+   next, which is what makes the sidebar read as one control instead of a column
+   of separate links. */
+.navlink--active::before { animation: nav-mark var(--t-base) var(--ease) both; }
+
+@keyframes nav-mark {
+  from { transform: translateY(-50%) scaleY(.2); opacity: 0; }
+  to   { transform: translateY(-50%) scaleY(1); opacity: 1; }
+}
+
+/* The assistant grows out of its corner rather than appearing whole. */
+.assistant { animation: panel-in var(--t-base) var(--ease) both; }
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Rows fade in with the same stagger, capped hard: fifty rows each waiting
+   their turn is a list you watch instead of read. */
+tbody tr { animation: row-in var(--t-fast) var(--ease) both; }
+tbody tr:nth-child(2) { animation-delay: 20ms; }
+tbody tr:nth-child(3) { animation-delay: 40ms; }
+tbody tr:nth-child(4) { animation-delay: 60ms; }
+tbody tr:nth-child(n+5) { animation-delay: 80ms; }
+
+@keyframes row-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.tabbar__item { transition: color var(--t-fast) var(--ease); }
 
 /* ---- Skeleton ----------------------------------------------------------- */
 
@@ -1604,7 +1646,14 @@ input:focus, select:focus, textarea:focus {
   .demo-row:active:not(:disabled),
   .chip:active,
   .stat--action:hover { transform: none; }
-  .content > * { animation: none; }
+  .content > *,
+  .content > *:nth-child(2),
+  .content > *:nth-child(3),
+  .content > *:nth-child(n+4),
+  .navlink--active::before,
+  .assistant,
+  tbody tr { animation: none; }
+  .tabbar__item { transition: none; }
   .skeleton__cell { animation: none; background: var(--surface-2); }
 }
 
@@ -1697,4 +1746,34 @@ input:focus, select:focus, textarea:focus {
   .sidenav__brand span { display: none; }
   .sidenav__user { flex-direction: column; gap: 0.375rem; padding: 0.75rem 0 0.25rem; }
   .sidenav__who { display: none; }
+}
+
+
+/* ---- Page header -------------------------------------------------------- */
+
+.pagehead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.pagehead__main { min-width: 0; }
+
+.pagehead__sub {
+  margin: 0.25rem 0 0;
+  max-width: 46rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.pagehead__actions { display: flex; gap: 0.5rem; flex: none; flex-wrap: wrap; }
+.pagehead__actions .btn { display: inline-flex; align-items: center; gap: 0.375rem; }
+
+@media (max-width: 40rem) {
+  .pagehead { flex-direction: column; align-items: stretch; }
+  .pagehead__actions .btn { flex: 1; justify-content: center; }
 }

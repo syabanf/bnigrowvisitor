@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import { useAuth } from '../auth'
+import PageHeader from '../components/PageHeader'
 
 export default function MyAccount() {
   const { user } = useAuth()
@@ -39,7 +40,9 @@ export default function MyAccount() {
 
   return (
     <>
-      <h1>Profil Akun</h1>
+      <PageHeader
+        title="Profil Saya"
+      />
 
       <section className="card">
         <h2>Identitas</h2>

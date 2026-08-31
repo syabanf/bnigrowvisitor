@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import Table from '../components/Table'
+import PageHeader from '../components/PageHeader'
 
 interface ChapterRow {
   chapter_id: string
@@ -42,7 +43,9 @@ export default function National() {
 
   return (
     <>
-      <h1>Dashboard Nasional</h1>
+      <PageHeader
+        title="Dashboard Nasional"
+      />
 
       <div className="stat-grid">
         <div className="stat"><span className="stat__label">Chapter</span><span className="stat__value">{data.chapters.length}</span></div>

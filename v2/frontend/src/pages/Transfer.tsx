@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import Icon from '../components/Icon'
+import PageHeader from '../components/PageHeader'
 
 interface ImportError {
   row: number
@@ -70,7 +71,9 @@ export default function Transfer() {
 
   return (
     <>
-      <h1>Export / Import</h1>
+      <PageHeader
+        title="Export / Import"
+      />
       {error && <div className="alert">{error}</div>}
 
       <section className="card">

@@ -5,6 +5,7 @@ import { useResource } from '../hooks/useResource'
 import Skeleton from '../components/Skeleton'
 import StatusSelect from '../components/StatusSelect'
 import { STATUS_LABEL, type Visitor, type VisitorStatus } from '../api/types'
+import PageHeader from '../components/PageHeader'
 
 // The pipeline reads left to right; only the ends are coloured. Tinting every
 // stage would make the list a rainbow in which nothing stands out.
@@ -51,10 +52,7 @@ export default function Visitors() {
 
   return (
     <>
-      <div className="page-title">
-        <h1>Visitor</h1>
-        <span className="count-chip">{total.toLocaleString('id-ID')} visitor</span>
-      </div>
+      <PageHeader title="Visitor" count={`${total.toLocaleString('id-ID')} visitor`} />
 
       <div className="filters">
         <input

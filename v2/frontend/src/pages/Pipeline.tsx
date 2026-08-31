@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import Skeleton from '../components/Skeleton'
 import Icon from '../components/Icon'
 import { STATUS_LABEL, type ListResult, type Visitor, type VisitorStatus } from '../api/types'
+import PageHeader from '../components/PageHeader'
 
 // The funnel, in order. Terminal states sit at the end so the board reads left
 // to right as progress.
@@ -61,10 +62,10 @@ export default function Pipeline() {
 
   return (
     <>
-      <h1>Pipeline</h1>
-      <p className="muted small">
-        Perjalanan visitor dari mendaftar sampai jadi member. Geser kartu dengan tombol panah.
-      </p>
+      <PageHeader
+        title="Pipeline"
+        subtitle={<>Perjalanan visitor dari mendaftar sampai jadi member. Geser kartu dengan tombol panah.</>}
+      />
 
       {error && <div className="alert">{error}</div>}
       {loading ? (

@@ -5,6 +5,7 @@ import StatusSelect from '../components/StatusSelect'
 import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import PageHeader from '../components/PageHeader'
 
 interface Member {
   id: string
@@ -56,10 +57,7 @@ export default function Members() {
 
   return (
     <>
-      <div className="page-title">
-        <h1>Member</h1>
-        <span className="count-chip">{total.toLocaleString('id-ID')} member</span>
-      </div>
+      <PageHeader title="Member" count={`${total.toLocaleString('id-ID')} member`} />
 
       <div className="filters">
         <input

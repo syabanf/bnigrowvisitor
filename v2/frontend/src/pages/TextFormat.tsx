@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/client'
+import PageHeader from '../components/PageHeader'
 
 interface Template {
   id: string
@@ -68,12 +69,10 @@ export default function TextFormat() {
 
   return (
     <>
-      <h1>Text Format</h1>
-      <p className="muted small">
-        Template pesan WhatsApp. Placeholder yang tidak dikenal sengaja dibiarkan terlihat
-        saat dirender — {'{salah_ketik}'} yang muncul di pratinjau memberi tahu kamu,
-        string kosong menyembunyikannya sampai pesan telanjur terkirim.
-      </p>
+      <PageHeader
+        title="Text Format"
+        subtitle={<>Template pesan WhatsApp. Placeholder yang tidak dikenal sengaja dibiarkan terlihat saat dirender — {'{salah_ketik}'} yang muncul di pratinjau memberi tahu kamu, string kosong menyembunyikannya sampai pesan telanjur terkirim.</>}
+      />
 
       {error && <div className="alert">{error}</div>}
       {notice && <div className="alert alert--ok">{notice}</div>}

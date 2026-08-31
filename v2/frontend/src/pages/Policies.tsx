@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
+import PageHeader from '../components/PageHeader'
 
 interface Policy {
   id: string
@@ -61,11 +62,10 @@ export default function Policies() {
 
   return (
     <>
-      <h1>Template &amp; Policy</h1>
-      <p className="muted small">
-        Aturan yang berlaku nasional. Baris tanpa chapter adalah default; baris dengan chapter
-        menimpanya untuk chapter itu saja.
-      </p>
+      <PageHeader
+        title="Template & Policy"
+        subtitle={<>Aturan yang berlaku nasional. Baris tanpa chapter adalah default; baris dengan chapter menimpanya untuk chapter itu saja.</>}
+      />
 
       {error && <div className="alert">{error}</div>}
       {notice && <div className="alert alert--ok">{notice}</div>}

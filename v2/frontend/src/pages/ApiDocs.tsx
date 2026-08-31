@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Icon from '../components/Icon'
+import PageHeader from '../components/PageHeader'
+import Skeleton from '../components/Skeleton'
 
 interface Param { name: string; in: string; description: string }
 interface Example { request: string; response: string }
@@ -58,21 +60,19 @@ export default function ApiDocs() {
       .catch(err => setError(err instanceof Error ? err.message : 'Gagal memuat dokumentasi.'))
   }, [])
 
-  if (error) return <><h1>Dokumentasi API</h1><div className="alert">{error}</div></>
-  if (!docs) return <><h1>Dokumentasi API</h1><p className="muted">Memuat…</p></>
+  // The header renders on every path, so the page keeps its identity while it
+  // is still loading or has failed — a bare error under no title reads as the
+  // app having lost its place.
+  if (error) return <><PageHeader title="Dokumentasi API" /><div className="alert">{error}</div></>
+  if (!docs) return <><PageHeader title="Dokumentasi API" /><Skeleton rows={4} columns="1fr" /></>
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>Dokumentasi API</h1>
-          <p className="muted small">
-            API mesin untuk integrasi. Terpisah dari API yang dipakai aplikasi ini
-            sendiri, dan otentikasinya memakai kunci, bukan sesi login.
-          </p>
-        </div>
-        <Link to="/api-keys" className="btn"><Icon name="key" /> Kelola Kunci</Link>
-      </div>
+      <PageHeader
+        title="Dokumentasi API"
+        subtitle={<>API mesin untuk integrasi. Terpisah dari API yang dipakai aplikasi ini sendiri, dan otentikasinya memakai kunci, bukan sesi login.</>}
+        actions={<Link to="/api-keys" className="btn"><Icon name="key" /> Kelola Kunci</Link>}
+      />
 
       <section className="card">
         <h2>Base URL</h2>

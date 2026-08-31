@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import PageHeader from '../components/PageHeader'
 
 interface Guest {
   id: string
@@ -23,10 +24,7 @@ export default function Guests() {
 
   return (
     <>
-      <div className="page-title">
-        <h1>Guest</h1>
-        <span className="count-chip">{total.toLocaleString('id-ID')} guest</span>
-      </div>
+      <PageHeader title="Guest" count={`${total.toLocaleString('id-ID')} guest`} />
       <p className="muted small">
         Tamu yang hadir tanpa lewat alur visitor — dipisah supaya statistik konversi visitor tetap bersih.
       </p>

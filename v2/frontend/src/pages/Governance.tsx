@@ -3,6 +3,7 @@ import Icon from '../components/Icon'
 import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import PageHeader from '../components/PageHeader'
 
 interface LoginAttempt {
   id: string
@@ -41,8 +42,11 @@ export default function Governance() {
 
   return (
     <>
-      <h1>Governance &amp; Audit</h1>
-      <p className="muted small">Riwayat percobaan login lintas chapter.</p>
+      <PageHeader
+        title="Governance & Audit"
+        count={`${(succeeded + failed).toLocaleString('id-ID')} percobaan`}
+        subtitle={<>Riwayat percobaan login lintas chapter.</>}
+      />
 
       {error && <div className="alert">{error}</div>}
 

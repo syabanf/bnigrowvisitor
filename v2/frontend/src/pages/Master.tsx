@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api/client'
 import Icon from '../components/Icon'
+import PageHeader from '../components/PageHeader'
 
 interface Organization { id: string; name: string; code: string }
 interface City { id: string; organization_id: string; name: string }
@@ -70,7 +71,9 @@ export default function Master() {
 
   return (
     <>
-      <h1>Master Wilayah</h1>
+      <PageHeader
+        title="Master Wilayah"
+      />
       <p className="muted small breadcrumb">
         Struktur tenant:
         {['Organisasi', 'Kota', 'Area', 'Chapter'].map((level, i) => (

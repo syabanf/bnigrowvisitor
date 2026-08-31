@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { STATUS_LABEL, type VisitorStatus } from '../api/types'
+import PageHeader from '../components/PageHeader'
 
 interface ChapterStats {
   total_visitors: number
@@ -52,7 +53,9 @@ export default function Dashboard() {
 
   return (
     <>
-      <h1>Dashboard Chapter</h1>
+      <PageHeader
+        title="Dashboard Chapter"
+      />
 
       <div className="stat-grid">
         <Stat label="Total Visitor" value={stats.total_visitors} />

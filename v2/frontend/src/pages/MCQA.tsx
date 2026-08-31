@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import PageHeader from '../components/PageHeader'
 
 interface McqaVisitor {
   id: string
@@ -47,10 +48,7 @@ export default function MCQA() {
 
   return (
     <>
-      <div className="page-title">
-        <h1>MCQA</h1>
-        <span className="count-chip">{total.toLocaleString('id-ID')} visitor hadir</span>
-      </div>
+      <PageHeader title="MCQA" count={`${total.toLocaleString('id-ID')} visitor hadir`} />
       <p className="muted small">
         Hasil airtime visitor yang sudah hadir. Visitor yang belum hadir tidak muncul di sini —
         mencatat airtime untuk mereka akan merusak laporan.

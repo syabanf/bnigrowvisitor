@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Table from '../components/Table'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import PageHeader from '../components/PageHeader'
 
 interface LogEntry {
   id: string
@@ -36,8 +37,11 @@ export default function Activity() {
 
   return (
     <>
-      <h1>Log Aktivitas</h1>
-      <p className="muted small">Jejak perubahan data di chapter ini.</p>
+      <PageHeader
+        title="Log Aktivitas"
+        count={`${total.toLocaleString('id-ID')} entri`}
+        subtitle={<>Jejak perubahan data di chapter ini.</>}
+      />
 
       <div className="filters">
         <select value={action} onChange={e => setAction(e.target.value)} aria-label="Filter aksi">

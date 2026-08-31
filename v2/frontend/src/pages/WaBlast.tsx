@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { STATUS_LABEL } from '../api/types'
+import PageHeader from '../components/PageHeader'
 
 interface Template {
   id: string
@@ -59,12 +60,10 @@ export default function WaBlast() {
 
   return (
     <>
-      <h1>WA Blast</h1>
-      <p className="muted small">
-        Pesan disiapkan di sini, lalu <strong>kamu</strong> yang menekan kirim. Aplikasi ini
-        sengaja tidak mengirim otomatis — gateway WhatsApp tidak resmi adalah cara tercepat
-        nomor chapter diblokir.
-      </p>
+      <PageHeader
+        title="WA Blast"
+        subtitle={<>Pesan disiapkan di sini, lalu <strong>kamu</strong> yang menekan kirim. Aplikasi ini sengaja tidak mengirim otomatis — gateway WhatsApp tidak resmi adalah cara tercepat nomor chapter diblokir.</>}
+      />
 
       {error && <div className="alert">{error}</div>}
 

@@ -3,6 +3,7 @@ import { api } from '../api/client'
 import Table from '../components/Table'
 import { useAuth } from '../auth'
 import type { Role, User } from '../api/types'
+import PageHeader from '../components/PageHeader'
 
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Admin',
@@ -74,7 +75,9 @@ export default function Accounts() {
 
   return (
     <>
-      <h1>Kelola Akun</h1>
+      <PageHeader
+        title="Kelola Akun"
+      />
 
       {error && <div className="alert">{error}</div>}
       {notice && <div className="alert alert--ok">{notice}</div>}

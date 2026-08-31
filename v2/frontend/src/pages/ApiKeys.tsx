@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Icon from '../components/Icon'
 import Table from '../components/Table'
+import PageHeader from '../components/PageHeader'
 
 interface ApiKey {
   id: string
@@ -105,18 +106,15 @@ export default function ApiKeys() {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>API Keys</h1>
-          <p className="muted small">
-            Kunci untuk integrasi eksternal. Server hanya menyimpan hash-nya — kunci
-            aslinya tampil sekali saja saat dibuat dan tidak bisa dipulihkan.
-          </p>
-        </div>
-        <Link to="/api-docs" className="btn">
-          <Icon name="clipboard" /> Dokumentasi API
-        </Link>
-      </div>
+      <PageHeader
+        title="API Keys"
+        subtitle={<>Kunci untuk integrasi eksternal. Server hanya menyimpan hash-nya — kunci aslinya tampil sekali saja saat dibuat dan tidak bisa dipulihkan.</>}
+        actions={
+          <Link to="/api-docs" className="btn">
+            <Icon name="clipboard" /> Dokumentasi API
+          </Link>
+        }
+      />
 
       {error && <div className="alert">{error}</div>}
 

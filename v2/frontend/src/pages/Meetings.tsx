@@ -4,6 +4,7 @@ import Table from '../components/Table'
 import { formatDate } from '../lib/format'
 import Pagination from '../components/Pagination'
 import { useResource } from '../hooks/useResource'
+import PageHeader from '../components/PageHeader'
 
 interface Meeting {
   id: string
@@ -44,10 +45,7 @@ export default function Meetings() {
 
   return (
     <>
-      <div className="page-title">
-        <h1>Weekly Meeting</h1>
-        <span className="count-chip">{total.toLocaleString('id-ID')} meeting</span>
-      </div>
+      <PageHeader title="Weekly Meeting" count={`${total.toLocaleString('id-ID')} meeting`} />
 
       {error && <div className="alert">{error}</div>}
 
