@@ -7,18 +7,20 @@ import (
 )
 
 type DashboardUsecase struct {
-	stats domain.StatsRepository
+	stats    domain.StatsRepository
+	insights domain.ChapterInsightRepository
 }
 
-func NewDashboardUsecase(stats domain.StatsRepository) *DashboardUsecase {
-	return &DashboardUsecase{stats: stats}
+func NewDashboardUsecase(stats domain.StatsRepository, insights domain.ChapterInsightRepository) *DashboardUsecase {
+	return &DashboardUsecase{stats: stats, insights: insights}
 }
 
 type ChapterDashboard struct {
-	Stats          *domain.ChapterStats `json:"stats"`
-	StatusChart    []domain.StatusCount `json:"status_chart"`
-	ConversionRate float64              `json:"conversion_rate"`
-	AttendanceRate float64              `json:"attendance_rate"`
+	Stats          *domain.ChapterStats   `json:"stats"`
+	Insight        *domain.ChapterInsight `json:"insight"`
+	StatusChart    []domain.StatusCount   `json:"status_chart"`
+	ConversionRate float64                `json:"conversion_rate"`
+	AttendanceRate float64                `json:"attendance_rate"`
 }
 
 func (uc *DashboardUsecase) Chapter(ctx context.Context, scope domain.Scope) (*ChapterDashboard, error) {
@@ -32,8 +34,13 @@ func (uc *DashboardUsecase) Chapter(ctx context.Context, scope domain.Scope) (*C
 	}
 	// The rates are derived, not stored: keeping them out of the table means
 	// they can never drift from the counts they come from.
+	insight, err := uc.insights.Insight(ctx, scope)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ChapterDashboard{
-		Stats: stats, StatusChart: chart,
+		Stats: stats, Insight: insight, StatusChart: chart,
 		ConversionRate: stats.ConversionRate(),
 		AttendanceRate: stats.AttendanceRate(),
 	}, nil

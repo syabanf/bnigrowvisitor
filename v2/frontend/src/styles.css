@@ -1977,3 +1977,140 @@ tbody tr:nth-child(n+5) { animation-delay: 80ms; }
 
 .empty svg { color: var(--line-strong); }
 .empty p { margin: 0; font-size: 0.875rem; }
+
+
+/* ============================================================================
+   Chapter dashboard
+   ==========================================================================*/
+
+.focus {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.focus__card {
+  display: grid;
+  gap: 0.125rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+
+.focus__card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-2); }
+.focus__card:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+.focus__label {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.focus__value {
+  font-size: 2rem; font-weight: 700; line-height: 1.05;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+}
+
+.focus__hint { font-size: 0.7rem; color: var(--muted); }
+
+/* One colour per queue, matching the reference. They are categories, not
+   severities — a purple figure is not more urgent than an amber one, it is a
+   different kind of work. */
+.focus--red .focus__value    { color: var(--red); }
+.focus--purple .focus__value { color: #7c3aed; }
+.focus--amber .focus__value  { color: #b45309; }
+.focus--green .focus__value  { color: var(--good); }
+
+.card__head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem;
+}
+.card__head h2 { margin: 0; }
+.card__head p { margin: 0.125rem 0 0; }
+
+.card__link {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.8125rem; font-weight: 600; color: var(--red); text-decoration: none;
+}
+.card__link:hover { text-decoration: underline; }
+
+.wa-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.5rem; }
+
+.wa-card {
+  display: grid; gap: 0.125rem;
+  padding: 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--r-md);
+}
+.wa-card__pic { font-size: 0.75rem; font-weight: 600; color: var(--good); }
+
+/* The funnel reads left to right as stages, each with its own share of the
+   first. Wraps rather than shrinking below legibility. */
+.funnel-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.5rem; }
+
+.funnel-step {
+  display: grid; gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.funnel-step__head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; }
+.funnel-step__label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; color: var(--muted); }
+.funnel-step__pct { font-size: 0.75rem; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.funnel-step__count { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+.funnel-step__track { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.funnel-step__fill {
+  display: block; height: 100%; border-radius: inherit;
+  transform-origin: left;
+  animation: funnel-grow var(--t-slow) var(--ease) both;
+}
+
+/* Stage colours run cool to warm, so the eye reads progression rather than
+   status. */
+.funnel-step__fill--0 { background: #94a3b8; }
+.funnel-step__fill--1 { background: #22c55e; }
+.funnel-step__fill--2 { background: #10b981; }
+.funnel-step__fill--3 { background: #f97316; }
+.funnel-step__fill--4 { background: #06b6d4; }
+
+.split { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 62rem) { .split { grid-template-columns: 1fr 1fr; } }
+
+.chart { width: 100%; height: auto; overflow: visible; }
+.chart__grid { stroke: var(--line); stroke-width: 1; }
+.chart__axis { fill: var(--muted); font-size: 10px; }
+.chart__area { fill: rgba(249, 115, 22, .12); }
+.chart__line { fill: none; stroke: #f97316; stroke-width: 2; stroke-linecap: round; }
+.chart__dot { fill: #fff; stroke: #f97316; stroke-width: 2; }
+.chart__value { fill: var(--ink-2); font-size: 10px; font-weight: 600; }
+
+.rankbars { display: grid; gap: 0.375rem; }
+.rankbar { display: grid; grid-template-columns: 8rem 1fr 2rem; align-items: center; gap: 0.5rem; }
+
+.rankbar__label {
+  font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rankbar__track { height: 0.6rem; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.rankbar__fill {
+  display: block; height: 100%; border-radius: inherit;
+  background: linear-gradient(90deg, var(--red), #f97316);
+  transform-origin: left;
+  animation: funnel-grow var(--t-slow) var(--ease) both;
+}
+.rankbar__count { text-align: right; font-size: 0.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 40rem) {
+  .rankbar { grid-template-columns: 6rem 1fr 1.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funnel-step__fill, .rankbar__fill { animation: none; }
+}
